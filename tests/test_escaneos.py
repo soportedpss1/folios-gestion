@@ -9,7 +9,7 @@ from werkzeug.datastructures import FileStorage
 from app.config import Config
 from app.extensions import db
 from app.models.audit_log import AuditLog
-from app.services.escaneos import guardar_y_matchear
+from app.services.escaneos import guardar_y_matchear, validar_carpeta
 from app.services.permisos import PERMISOS, puede
 from tests.conftest import make_folio, make_user
 
@@ -138,6 +138,150 @@ def test_servicio_audita_solo_cambio(app, tipo, scans_dir):
         segunda = AuditLog.query.filter_by(tabla='folios', registro_id=folio.id).count()
     assert primera == 1, 'el primer marcado debe auditar'
     assert segunda == 1, 're-subir no debe duplicar el log'
+
+
+def escribir(scans_dir, anio, nombre):
+    """Crea un JPG directamente en la carpeta (simula subida externa/FTP)."""
+    carpeta = scans_dir / str(anio)
+    carpeta.mkdir(parents=True, exist_ok=True)
+    (carpeta / nombre).write_bytes(b'IMG')
+
+
+# --- validar_carpeta: reconciliar scans/ contra la DB ---
+
+
+def test_validar_marca_desde_carpeta(app, tipo, scans_dir):
+    folio = make_folio(tipo, anio=2026, numero=1000)
+    db.session.commit()
+    escribir(scans_dir, 2026, '1000.jpg')
+    with app.test_request_context():
+        reporte = validar_carpeta(1)
+    assert folio.escaneado is True
+    assert reporte['marcados'] == 1
+    assert reporte['desmarcados'] == 0
+    log = AuditLog.query.filter_by(
+        tabla='folios', registro_id=folio.id).one()
+    assert log.datos_anteriores == {'escaneado': False}
+    assert log.datos_nuevos == {'escaneado': True}
+
+
+def test_validar_desmarca_si_carpeta_del_anio_existe_vacia(app, tipo, scans_dir):
+    folio = make_folio(tipo, anio=2026, numero=1000, escaneado=True)
+    db.session.commit()
+    (scans_dir / '2026').mkdir(parents=True)  # carpeta existe, sin archivos
+    with app.test_request_context():
+        reporte = validar_carpeta(1)
+    assert folio.escaneado is False, 'carpeta existente sin archivo ⇒ desmarcar'
+    assert reporte['desmarcados'] == 1
+    log = AuditLog.query.filter_by(
+        tabla='folios', registro_id=folio.id).one()
+    assert log.datos_anteriores == {'escaneado': True}
+    assert log.datos_nuevos == {'escaneado': False}
+
+
+def test_validar_no_desmarca_si_falta_carpeta_de_anio(app, tipo, scans_dir):
+    # Raíz existe pero sin subcarpeta 2026: volumen a medio montar no debe
+    # borrar los marcados de ese año.
+    folio = make_folio(tipo, anio=2026, numero=1000, escaneado=True)
+    db.session.commit()
+    scans_dir.mkdir(parents=True)
+    with app.test_request_context():
+        reporte = validar_carpeta(1)
+    assert folio.escaneado is True
+    assert reporte['desmarcados'] == 0
+    assert reporte['anios_sin_carpeta'] == [2026]
+
+
+def test_validar_sin_carpeta_raiz_no_toca_nada(app, tipo, scans_dir):
+    folio = make_folio(tipo, anio=2026, numero=1000, escaneado=True)
+    db.session.commit()
+    assert not scans_dir.exists()
+    with app.test_request_context():
+        reporte = validar_carpeta(1)
+    assert reporte['error_raiz'] is True
+    assert folio.escaneado is True, 'sin carpeta raíz no se desmarca nada'
+    assert reporte['marcados'] == 0
+    assert reporte['desmarcados'] == 0
+    assert AuditLog.query.count() == 0
+
+
+def test_validar_ignora_archivos_invalidos_y_de_la_raiz(app, tipo, scans_dir):
+    folio = make_folio(tipo, anio=2026, numero=1000)
+    db.session.commit()
+    escribir(scans_dir, 2026, '1000.jpg')
+    escribir(scans_dir, 2026, 'copia 2026.jpg')   # nombre inválido
+    (scans_dir / 'suelto.jpg').write_bytes(b'X')   # suelto en la raíz
+    with app.test_request_context():
+        reporte = validar_carpeta(1)
+    assert folio.escaneado is True, 'el inválido no aborta la validación'
+    assert reporte['archivos'] == 1
+    assert reporte['ignorados'] == 2
+
+
+def test_validar_idempotente_audita_solo_cambio(app, tipo, scans_dir):
+    folio = make_folio(tipo, anio=2026, numero=1000)
+    db.session.commit()
+    escribir(scans_dir, 2026, '1000.jpg')
+    with app.test_request_context():
+        validar_carpeta(1)
+        validar_carpeta(1)
+    logs = AuditLog.query.filter_by(tabla='folios', registro_id=folio.id)
+    assert logs.count() == 1, 're-validar no debe duplicar el log'
+
+
+# --- botón / endpoint en el módulo de folios ---
+
+
+def test_validar_endpoint_requiere_login(client):
+    assert client.post('/folios/validar-escaneados').status_code == 302
+
+
+def test_validar_endpoint_sin_permiso_redirige(client):
+    make_user('lector', 'lectura')
+    client.post('/auth/login',
+                data={'username': 'lector', 'password': 'pass12345'})
+    resp = client.post('/folios/validar-escaneados', follow_redirects=True)
+    assert resp.status_code == 200
+    assert 'No tiene permisos' in resp.get_data(as_text=True)
+
+
+def test_validar_endpoint_marca_y_flash(auth_client, folio, scans_dir):
+    escribir(scans_dir, 2026, '1000.jpg')
+    resp = auth_client.post('/folios/validar-escaneados',
+                            follow_redirects=True)
+    assert resp.status_code == 200
+    assert folio.escaneado is True
+    text = resp.get_data(as_text=True)
+    assert 'Validación completada' in text
+    assert '1 folio marcado' in text
+
+
+def test_validar_endpoint_sin_carpeta_flash_error(auth_client, folio, scans_dir):
+    folio.escaneado = True
+    db.session.commit()
+    resp = auth_client.post('/folios/validar-escaneados',
+                            follow_redirects=True)
+    assert resp.status_code == 200
+    assert 'No existe la carpeta de escaneados' in resp.get_data(as_text=True)
+    assert folio.escaneado is True
+
+
+# Nota: un solo usuario por test. El fixture `app` mantiene un app context
+# activo y Flask lo reusa en cada request ⇒ `g._login_user` (caché de
+# Flask-Login) se comparte entre clients del mismo test: un segundo login
+# vería al usuario anterior. Con un solo client por test, `g` nace limpio.
+def test_boton_visible_para_operador(auth_client):
+    text = auth_client.get('/folios/').get_data(as_text=True)
+    assert 'Validar Escaneados' in text
+
+
+def test_boton_oculto_para_lectura(client):
+    make_user('lector', 'lectura')
+    client.post('/auth/login',
+                data={'username': 'lector', 'password': 'pass12345'})
+    text = client.get('/folios/').get_data(as_text=True)
+    assert 'Validar Escaneados' not in text, \
+        'lectura no debe ver el botón (no tiene escaneos.subir)'
 
 
 def post_subir(client, anio, archivos):

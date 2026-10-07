@@ -11,6 +11,7 @@ from app.models.folio import Folio
 from app.models.tipo_certificado import TipoCertificado
 from app.services import import_excel
 from app.services.audit import log_audit
+from app.services.escaneos import validar_carpeta
 from app.services.permisos import puede
 from app.services.queries import get_or_404
 from app.utils import plural
@@ -73,6 +74,32 @@ def index():
 def details(id):
     folio = get_or_404(Folio, id)
     return render_template('folios/details.html', folio=folio)
+
+
+@folios_bp.route('/validar-escaneados', methods=['POST'])
+@login_required
+@permiso_requerido('escaneos.subir', hacia='blueprint')
+def validar_escaneados():
+    """Reconcilia scans/ contra la DB (marca y desmarca folios escaneados)."""
+    reporte = validar_carpeta(current_user.id)
+
+    if reporte['error_raiz']:
+        flash('No existe la carpeta de escaneados: nada fue validado.',
+              'danger')
+        return redirect(url_for('folios.index'))
+
+    m, d = reporte['marcados'], reporte['desmarcados']
+    partes = [f'{m} {plural(m, "folio")} {plural(m, "marcado")}',
+              f'{d} {plural(d, "folio")} {plural(d, "desmarcado")}']
+    if reporte['ignorados']:
+        i = reporte['ignorados']
+        partes.append(f'{i} {plural(i, "archivo")} {plural(i, "ignorado")}')
+    flash('Validación completada: ' + ', '.join(partes) + '.', 'success')
+    if reporte['anios_sin_carpeta']:
+        anios = ', '.join(str(a) for a in reporte['anios_sin_carpeta'])
+        flash(f'Sin carpeta para {anios}: esos folios no se desmarcaron.',
+              'warning')
+    return redirect(url_for('folios.index'))
 
 
 @folios_bp.route('/update-status', methods=['POST'])

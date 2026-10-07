@@ -13,6 +13,16 @@
         <i class="fas fa-file-import me-1"></i>Validar Digitado
     </a>
     {% endif %}
+    {% if puede('escaneos.subir') %}
+    <form method="POST" action="{{ url_for('folios.validar_escaneados') }}"
+          class="d-inline" id="form-validar-escaneados">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="button" class="btn btn-outline-primary"
+                id="btn-validar-escaneados">
+            <i class="fas fa-camera me-1"></i>Validar Escaneados
+        </button>
+    </form>
+    {% endif %}
 </div>
 
 <div class="card border-0 shadow-sm mb-4">
@@ -234,5 +244,20 @@
             Swal.fire('Error', 'Error de conexión.', 'error');
         });
     }
+
+    document.getElementById('btn-validar-escaneados')?.addEventListener('click', () => {
+        Swal.fire({
+            icon: 'question',
+            title: 'Validar escaneados',
+            text: 'Se recorrerá la carpeta de escaneos: los folios con archivo quedan marcados y los marcados sin archivo quedarán desmarcados.',
+            showCancelButton: true,
+            confirmButtonText: 'Validar',
+            cancelButtonText: 'Cancelar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                document.getElementById('form-validar-escaneados').submit();
+            }
+        });
+    });
 </script>
 {% endblock %}
