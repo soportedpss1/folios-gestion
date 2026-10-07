@@ -36,9 +36,10 @@ mkdir -p scans secrets && sudo chown -R 1000:1000 scans secrets
 docker compose -f docker-compose.deploy.yml pull
 docker compose -f docker-compose.deploy.yml up -d
 
-# tablas + admin con contraseña aleatoria (impresa una vez)
-docker compose -f docker-compose.deploy.yml exec app python init_db.py
+# migraciones primero, init_db después (ver docs/despliegue.md §6)
 docker compose -f docker-compose.deploy.yml exec -e FLASK_APP=run.py app flask db upgrade
+# tablas faltantes + admin con contraseña aleatoria (impresa una vez)
+docker compose -f docker-compose.deploy.yml exec app python init_db.py
 
 curl -fs http://localhost:8089/health        # {"status": "ok"}
 ```

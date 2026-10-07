@@ -29,8 +29,11 @@ echo "SECRET_KEY=$(python3 -c 'import secrets; print(secrets.token_hex(32))')"
 mkdir -p scans secrets && sudo chown -R 1000:1000 scans secrets
 
 docker compose -f docker-compose.deploy.yml up -d
-docker compose -f docker-compose.deploy.yml exec app python init_db.py
+
+# Orden correcto: migraciones primero, init_db después
+# (init_db hace create_all y dejaría el esquema fuera de alembic_version)
 docker compose -f docker-compose.deploy.yml exec -e FLASK_APP=run.py app flask db upgrade
+docker compose -f docker-compose.deploy.yml exec app python init_db.py
 
 open http://localhost:8089
 ```

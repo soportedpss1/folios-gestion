@@ -165,16 +165,22 @@ docker compose -f docker-compose.deploy.yml --profile tools up -d phpmyadmin   #
 
 ## 6. Inicializar la base
 
-**Servidor nuevo (sin datos):**
+**Servidor nuevo (sin datos):** migrar **primero**, inicializar **después**.
 
 ```bash
 cd /opt/folios
-# 1) tablas + usuario admin con contraseña aleatoria (se imprime UNA vez)
-docker compose -f docker-compose.deploy.yml exec app python init_db.py
-
-# 2) esquema al HEAD de las migraciones
+# 1) esquema al HEAD de las migraciones
 docker compose -f docker-compose.deploy.yml exec -e FLASK_APP=run.py app flask db upgrade
+
+# 2) tablas faltantes + usuario admin con contraseña aleatoria (se imprime UNA vez)
+docker compose -f docker-compose.deploy.yml exec app python init_db.py
 ```
+
+> **Orden importa:** `init_db.py` hace `db.create_all()`, que crea las tablas
+> *sin* `alembic_version`. Si se corre antes que `flask db upgrade`, la
+> migración `0001_baseline` falla con `Table '…' already exists` y
+> `flask db check` reporta el esquema desactualizado. Al revés es seguro:
+> `create_all` no toca tablas que ya existen.
 
 Guardar la contraseña de `admin` impresa por `init_db.py`. Si se pierde:
 
