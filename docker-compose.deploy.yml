@@ -1,0 +1,98 @@
+# Despliegue en un servidor ajeno: usa la imagen publicada en Docker Hub
+# en lugar de construir desde el código.
+#
+#   docker compose -f docker-compose.deploy.yml up -d
+#
+# Para probar otra versión sin editar el archivo: FOLIOS_IMAGE=... en el .env
+# (ver docs/despliegue.md).
+
+services:
+  app:
+    image: ${FOLIOS_IMAGE:-soportedpss1/folios-gestion:1.0.0}
+    ports:
+      - "8089:8089"
+    environment:
+      # Override del env_file: el contenedor siempre corre en producción.
+      FLASK_CONFIG: production
+      # Rate limits compartidos entre los 4 workers de gunicorn
+      RATELIMIT_STORAGE_URI: redis://redis:6379
+      # Hora local en las fechas mostradas (audit/folios guardan UTC)
+      TZ: ${TZ:-America/Santo_Domingo}
+      # Detrás de reverse proxy con TLS: SESSION_COOKIE_SECURE=true y TRUST_PROXY=true
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}
+      TRUST_PROXY: ${TRUST_PROXY:-false}
+    env_file: .env
+    volumes:
+      # JSON de la cuenta de servicio (sync manual desde la UI)
+      - ./secrets:/app/secrets
+      # Folios escaneados JPG: <SCANS_FOLDER>/<anio>/<numero>.jpg
+      - ./scans:/app/scans
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8089/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Worker de sincronización automática folios -> Google Sheets (APScheduler).
+  sync-worker:
+    image: ${FOLIOS_IMAGE:-soportedpss1/folios-gestion:1.0.0}
+    command: python run_worker.py
+    environment:
+      FLASK_CONFIG: production
+      TZ: ${TZ:-America/Santo_Domingo}
+    env_file: .env
+    volumes:
+      - ./secrets:/app/secrets
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: mariadb:11.4
+    environment:
+      # Comillas: una clave vacía o con ':' rompe el arranque de MariaDB.
+      MYSQL_ROOT_PASSWORD: "${DB_ROOT_PASSWORD:?DB_ROOT_PASSWORD falta en .env}"
+      MYSQL_DATABASE: "${DB_NAME:?DB_NAME falta en .env}"
+      MYSQL_USER: "${DB_USER:?DB_USER falta en .env}"
+      MYSQL_PASSWORD: "${DB_PASSWORD:?DB_PASSWORD falta en .env}"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    # No arranca con `docker compose up`; requiere: docker compose --profile tools up phpmyadmin
+    profiles: ["tools"]
+    ports:
+      - "8081:80"
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+    depends_on:
+      - db
+    restart: unless-stopped
+
+volumes:
+  mariadb_data:

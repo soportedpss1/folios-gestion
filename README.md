@@ -21,6 +21,32 @@ docker compose --profile tools up -d phpmyadmin
 http://localhost:8081
 ```
 
+## Despliegue en otro servidor (imagen publicada)
+
+Para instalar en un servidor **sin código fuente ni compilación**, use la imagen
+pública de Docker Hub y el compose de despliegue (no el `docker-compose.yml`
+del repo, que construye desde el código):
+
+```bash
+mkdir -p /opt/folios && cd /opt/folios
+# copiar docker-compose.deploy.yml y .env.example desde el repo (scp)
+cp .env.example .env && chmod 600 .env      # editar SECRET_KEY y claves DB
+mkdir -p scans secrets && sudo chown -R 1000:1000 scans secrets
+
+docker compose -f docker-compose.deploy.yml pull
+docker compose -f docker-compose.deploy.yml up -d
+
+# tablas + admin con contraseña aleatoria (impresa una vez)
+docker compose -f docker-compose.deploy.yml exec app python init_db.py
+docker compose -f docker-compose.deploy.yml exec -e FLASK_APP=run.py app flask db upgrade
+
+curl -fs http://localhost:8089/health        # {"status": "ok"}
+```
+
+Imagen: `soportedpss1/folios-gestion:<tag>` (tags: `1.0.0`, `latest`).
+Guía completa —`.env` anotado, TLS/reverse proxy, copias, actualización y
+troubleshooting— en [`docs/despliegue.md`](docs/despliegue.md).
+
 ## Usuario por defecto
 
 - **Usuario:** admin
