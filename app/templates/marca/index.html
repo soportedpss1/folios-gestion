@@ -1,0 +1,141 @@
+{% extends 'base.html' %}
+
+{% block title %}Marca de la aplicación{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold mb-0">
+        <i class="fas fa-palette me-2 text-primary"></i>Marca de la aplicación
+    </h4>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-7">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white fw-semibold">
+                <i class="fas fa-font me-2 text-primary"></i>Textos
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('marca.guardar') }}" enctype="multipart/form-data">
+                    {{ form.hidden_tag() }}
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold" for="{{ form.nombre.id }}">
+                            {{ form.nombre.label.text }}
+                        </label>
+                        {{ form.nombre(class="form-control" ~ (" is-invalid" if form.nombre.errors else "")) }}
+                        {% for error in form.nombre.errors %}
+                            <div class="text-danger small mt-1" role="alert">{{ error }}</div>
+                        {% endfor %}
+                        <div class="form-text">Título de la pestaña (por defecto de las páginas), encabezado del menú y de login.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold" for="{{ form.titulo_sufijo.id }}">
+                            {{ form.titulo_sufijo.label.text }}
+                        </label>
+                        {{ form.titulo_sufijo(class="form-control" ~ (" is-invalid" if form.titulo_sufijo.errors else "")) }}
+                        {% for error in form.titulo_sufijo.errors %}
+                            <div class="text-danger small mt-1" role="alert">{{ error }}</div>
+                        {% endfor %}
+                        <div class="form-text">Se añade después del título de cada página: "Página - Sufijo". Vacío = sin sufijo.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold" for="{{ form.subtitulo.id }}">
+                            {{ form.subtitulo.label.text }}
+                        </label>
+                        {{ form.subtitulo(class="form-control" ~ (" is-invalid" if form.subtitulo.errors else "")) }}
+                        {% for error in form.subtitulo.errors %}
+                            <div class="text-danger small mt-1" role="alert">{{ error }}</div>
+                        {% endfor %}
+                        <div class="form-text">Línea pequeña bajo el nombre en el menú lateral.</div>
+                    </div>
+
+                    <hr>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold" for="{{ form.logo.id }}">
+                                {{ form.logo.label.text }}
+                            </label>
+                            {{ form.logo(class="form-control" ~ (" is-invalid" if form.logo.errors else "")) }}
+                            {% for error in form.logo.errors %}
+                                <div class="text-danger small mt-1" role="alert">{{ error }}</div>
+                            {% endfor %}
+                            <div class="form-text">PNG, JPG, SVG o WEBP, máximo 512 KB. Se muestra en el menú y en login.</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold" for="{{ form.favicon.id }}">
+                                {{ form.favicon.label.text }}
+                            </label>
+                            {{ form.favicon(class="form-control" ~ (" is-invalid" if form.favicon.errors else "")) }}
+                            {% for error in form.favicon.errors %}
+                                <div class="text-danger small mt-1" role="alert">{{ error }}</div>
+                            {% endfor %}
+                            <div class="form-text">Ícono de la pestaña del navegador. Mismo formato y límite.</div>
+                        </div>
+                    </div>
+
+                    {{ form.submit(class="btn btn-primary") }}
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white fw-semibold">
+                <i class="fas fa-image me-2 text-primary"></i>Vista previa
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-3">
+                    {% if marca.tiene_logo %}
+                        <img src="{{ marca.logo_url }}" alt="Logo actual" style="max-height:80px;">
+                    {% else %}
+                        <span class="text-muted small">Sin logo: se muestra el ícono predeterminado.</span>
+                    {% endif %}
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="fw-semibold">Logo</span>
+                    <form method="POST" action="{{ url_for('marca.quitar_logo') }}" class="d-inline"
+                          onsubmit="return confirm('¿Eliminar el logo actual?')">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-outline-danger btn-sm" {% if not marca.tiene_logo %}disabled{% endif %}>
+                            <i class="fas fa-trash me-1"></i>Quitar logo
+                        </button>
+                    </form>
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="fw-semibold">Favicon</span>
+                    <form method="POST" action="{{ url_for('marca.quitar_favicon') }}" class="d-inline"
+                          onsubmit="return confirm('¿Eliminar el favicon actual?')">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-outline-danger btn-sm" {% if not marca.tiene_favicon %}disabled{% endif %}>
+                            <i class="fas fa-trash me-1"></i>Quitar favicon
+                        </button>
+                    </form>
+                </div>
+                {% if marca.tiene_favicon %}
+                <div class="mt-3 text-center">
+                    <img src="{{ marca.favicon_url }}" alt="Favicon actual" style="height:32px;">
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white fw-semibold">
+                <i class="fas fa-file-pdf me-2 text-primary"></i>También en PDF
+            </div>
+            <div class="card-body mb-0">
+                <p class="mb-0 text-muted small">
+                    El logo cargado también aparece en la cabecera de los PDF de
+                    Reportes, Recepción y Centros. Los textos institucionales de
+                    esos PDF no se modifican desde aquí.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

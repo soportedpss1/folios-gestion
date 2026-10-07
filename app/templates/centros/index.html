@@ -1,0 +1,90 @@
+{% extends 'base.html' %}
+
+{% block title %}Gestión de Centros{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold mb-0">
+        <i class="fas fa-hospital me-2 text-primary"></i>Gestión de Centros de Salud
+    </h4>
+    <div class="d-flex gap-2 align-items-center">
+        <div class="btn-group">
+            <a href="{{ url_for('centros.export_lista_excel') }}" class="btn btn-success">
+                <i class="fas fa-file-excel me-1"></i>Excel
+            </a>
+            <a href="{{ url_for('centros.export_lista_pdf') }}" class="btn btn-danger">
+                <i class="fas fa-file-pdf me-1"></i>PDF
+            </a>
+        </div>
+        {% if puede('centros.gestionar') %}
+        <a href="{{ url_for('centros.create') }}" class="btn btn-primary">
+            <i class="fas fa-plus me-1"></i>Nuevo Centro
+        </a>
+        {% endif %}
+        {% if puede('centros.importar') %}
+        <a href="{{ url_for('centros.importar') }}" class="btn btn-outline-success">
+            <i class="fas fa-file-import me-1"></i>Importar
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 data-table">
+                <thead class="table-light">
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Teléfono</th>
+                        <th>Dirección</th>
+                        <th>Estado</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in centros %}
+                    <tr>
+                        <td><a href="{{ url_for('centros.detail', id=c.id) }}" class="text-decoration-none"><strong>{{ c.name }}</strong></a></td>
+                        <td>{{ c.telefono or '-' }}</td>
+                        <td>{{ c.direccion or '-' }}</td>
+                        <td>
+                            {% if c.activo %}
+                                <span class="badge bg-success">Activo</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Inactivo</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            <a href="{{ url_for('centros.detail', id=c.id) }}" class="btn btn-sm btn-outline-info" title="Ver detalle" aria-label="Ver detalle de {{ c.name }}">
+                                <i class="fas fa-eye" aria-hidden="true"></i>
+                            </a>
+                            <a href="{{ url_for('centros.edit', id=c.id) }}" class="btn btn-sm btn-outline-warning" title="Editar" aria-label="Editar {{ c.name }}">
+                                <i class="fas fa-edit" aria-hidden="true"></i>
+                            </a>
+                            <form method="POST" action="{{ url_for('centros.delete', id=c.id) }}" class="d-inline" onsubmit="return confirm('¿Desactivar este centro?')">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Desactivar" aria-label="Desactivar {{ c.name }}">
+                                    <i class="fas fa-ban" aria-hidden="true"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td class="text-center text-muted py-4" colspan="5">
+                            <i class="fas fa-hospital fa-2x mb-2 d-block"></i>
+                            No hay centros registrados
+                        </td>
+                        <td style="padding:0;width:0"></td>
+                        <td style="padding:0;width:0"></td>
+                        <td style="padding:0;width:0"></td>
+                        <td style="padding:0;width:0"></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

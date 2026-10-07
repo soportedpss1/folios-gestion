@@ -1,0 +1,170 @@
+{% extends 'base.html' %}
+
+{% block title %}Nueva Devolución{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold mb-0">
+        <i class="fas fa-plus-circle me-2 text-primary"></i>Nueva Devolución de Folios
+    </h4>
+    <a href="{{ url_for('devoluciones.index') }}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-1"></i>Volver
+    </a>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-4">
+                <form method="POST" data-loading>
+                    {{ form.hidden_tag() }}
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">{{ form.centroId.label.text }}</label>
+                            {{ form.centroId(class="form-select", id="centro-select") }}
+                            {% for error in form.centroId.errors %}
+                                <div class="text-danger small mt-1" role="alert">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold" for="tipo-select">Tipo de certificado</label>
+                            <select id="tipo-select" name="tipoFilter" class="form-select">
+                                <option value="">Seleccione un tipo de certificado</option>
+                                {% for t in tipos %}
+                                    <option value="{{ t.id }}"{% if t.id == tipo_actual %} selected{% endif %}>{{ t.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="col-md-12">
+                            <label class="form-label fw-semibold">
+                                {{ form.folio_ids.label.text }}
+                                <span class="badge bg-info ms-2" id="selected-count">0 seleccionados</span>
+                            </label>
+                            {{ form.folio_ids(class="form-select", size="10", id="folio-select") }}
+                            <small class="text-muted" id="folio-hint">Seleccione un tipo de certificado</small>
+                            <div id="folio-vacio" class="text-muted mt-1" style="display:none;">
+                                <i class="fas fa-info-circle me-1"></i>No hay folios pendientes de devolución para este centro
+                            </div>
+                            {% for error in form.folio_ids.errors %}
+                                <div class="text-danger small mt-1" role="alert">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="col-md-12">
+                            <label class="form-label fw-semibold">{{ form.fechaDevolucion.label.text }}</label>
+                            {{ form.fechaDevolucion(class="form-control") }}
+                            {% for error in form.fechaDevolucion.errors %}
+                                <div class="text-danger small mt-1" role="alert">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <div class="d-flex justify-content-end gap-2">
+                        <a href="{{ url_for('devoluciones.index') }}" class="btn btn-outline-secondary">Cancelar</a>
+                        {{ form.submit(class="btn btn-primary") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const centroSelect = document.getElementById('centro-select');
+    const tipoSelect = document.getElementById('tipo-select');
+    const folioSelect = document.getElementById('folio-select');
+    const counter = document.getElementById('selected-count');
+    const folioHint = document.getElementById('folio-hint');
+    const folioVacio = document.getElementById('folio-vacio');
+
+    function updateCounter() {
+        const n = folioSelect.selectedOptions.length;
+        counter.textContent = n === 1 ? '1 seleccionado' : n + ' seleccionados';
+    }
+
+    folioSelect.addEventListener('change', updateCounter);
+
+    function seleccionados() {
+        return Array.from(folioSelect.selectedOptions)
+            .map(o => ({ value: o.value, text: o.textContent }));
+    }
+
+    function pintarFolios(items, mantener) {
+        folioSelect.innerHTML = '';
+        for (const s of mantener) {
+            const opt = document.createElement('option');
+            opt.value = s.value;
+            opt.textContent = s.text;
+            opt.selected = true;
+            folioSelect.appendChild(opt);
+        }
+        for (const f of items) {
+            if (mantener.some(s => s.value == f.id)) continue;
+            const opt = document.createElement('option');
+            opt.value = f.id;
+            opt.textContent = f.texto;
+            folioSelect.appendChild(opt);
+        }
+        updateCounter();
+    }
+
+    // Sin tipo de certificado no se piden folios; sin centro tampoco.
+    // mantener = true solo en la carga inicial (revalidación de un POST con
+    // error): conserva las opciones que ya mandó el servidor. En cambios de
+    // tipo o de centro la selección se limpia siempre.
+    function loadFolios(mantener) {
+        const centroId = centroSelect.value;
+        const tipo = tipoSelect.value;
+        const guardados = mantener ? seleccionados() : [];
+
+        folioVacio.style.display = 'none';
+
+        if (!tipo) {
+            folioSelect.innerHTML = '';
+            updateCounter();
+            folioHint.style.display = 'block';
+            folioHint.textContent = 'Seleccione un tipo de certificado';
+            return;
+        }
+
+        if (!centroId) {
+            folioSelect.innerHTML = '';
+            updateCounter();
+            folioHint.style.display = 'block';
+            folioHint.textContent = 'Primero seleccione un Centro de Salud';
+            return;
+        }
+
+        folioHint.style.display = 'block';
+        folioHint.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Cargando folios...';
+
+        fetch(`/devoluciones/api/folios/${centroId}?tipo=${encodeURIComponent(tipo)}`)
+            .then(r => r.json())
+            .then(folios => {
+                folioHint.style.display = 'none';
+                pintarFolios(folios, guardados);
+                if (folios.length === 0 && guardados.length === 0) {
+                    folioVacio.style.display = 'block';
+                }
+            })
+            .catch(() => { /* red caída: se mantiene el select actual */ });
+    }
+
+    function recargarSinSeleccion() {
+        folioSelect.innerHTML = '';
+        updateCounter();
+        loadFolios(false);
+    }
+
+    centroSelect.addEventListener('change', recargarSinSeleccion);
+    tipoSelect.addEventListener('change', recargarSinSeleccion);
+    if (tipoSelect.value && centroSelect.value) loadFolios(true);  // revalidación de POST
+</script>
+{% endblock %}

@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+
+{% block title %}Nueva Recepción{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold mb-0">
+        <i class="fas fa-plus-circle me-2 text-primary"></i>Nueva Recepción de Folios
+    </h4>
+    <a href="{{ url_for('recepcion.index') }}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-1"></i>Volver
+    </a>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-4">
+                <form method="POST" data-loading>
+                    {{ form.hidden_tag() }}
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">{{ form.fecha.label.text }}</label>
+                            {{ form.fecha(class="form-control") }}
+                            {% for error in form.fecha.errors %}
+                                <div class="text-danger small mt-1" role="alert">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">{{ form.anioCert.label.text }}</label>
+                            {{ form.anioCert(class="form-control", placeholder="Ej: 2026") }}
+                            {% for error in form.anioCert.errors %}
+                                <div class="text-danger small mt-1" role="alert">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="col-md-12">
+                            <label class="form-label fw-semibold">{{ form.tipoCert.label.text }}</label>
+                            {{ form.tipoCert(class="form-select") }}
+                            {% for error in form.tipoCert.errors %}
+                                <div class="text-danger small mt-1" role="alert">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">{{ form.folioInicial.label.text }}</label>
+                            {{ form.folioInicial(class="form-control", placeholder="Ej: 1", inputmode="numeric") }}
+                            {% for error in form.folioInicial.errors %}
+                                <div class="text-danger small mt-1" role="alert">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">{{ form.folioFinal.label.text }}</label>
+                            {{ form.folioFinal(class="form-control", placeholder="Ej: 100", inputmode="numeric") }}
+                            {% for error in form.folioFinal.errors %}
+                                <div class="text-danger small mt-1" role="alert">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="col-12">
+                            <div class="alert alert-info mb-0">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Se crearán folios individuales del <strong id="preview-inicial">?</strong> al <strong id="preview-final">?</strong>
+                                (<span id="preview-total">0</span> folios)
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <div class="d-flex justify-content-end gap-2">
+                        <a href="{{ url_for('recepcion.index') }}" class="btn btn-outline-secondary">Cancelar</a>
+                        {{ form.submit(class="btn btn-primary") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const inicial = document.getElementById('folioInicial');
+    const final_ = document.getElementById('folioFinal');
+    const previewInicial = document.getElementById('preview-inicial');
+    const previewFinal = document.getElementById('preview-final');
+    const previewTotal = document.getElementById('preview-total');
+
+    function updatePreview() {
+        const i = parseInt(inicial.value) || 0;
+        const f = parseInt(final_.value) || 0;
+        previewInicial.textContent = i || '?';
+        previewFinal.textContent = f || '?';
+        previewTotal.textContent = f >= i ? (f - i + 1) : 0;
+    }
+
+    inicial.addEventListener('input', updatePreview);
+    final_.addEventListener('input', updatePreview);
+</script>
+{% endblock %}

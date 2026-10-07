@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+
+{% block title %}Iniciar Sesión{% endblock %}
+
+{% block auth_content %}
+<div class="login-container">
+    {% include 'components/flash.html' %}
+    <div class="card shadow-lg border-0">
+        <div class="card-body p-5">
+            <div class="text-center mb-4">
+                {% if marca.tiene_logo %}
+                <img src="{{ marca.logo_url }}" alt="{{ marca.nombre }}" class="mb-3" style="max-height:64px;">
+                {% else %}
+                <i class="fas fa-file-medical-alt text-primary fa-3x mb-3"></i>
+                {% endif %}
+                <h4 class="fw-bold text-body-emphasis">{{ marca.nombre }}</h4>
+                <p class="text-muted small">Dirección Provincial de Salud Santiago 1</p>
+                <hr>
+            </div>
+
+            <form method="POST" data-loading>
+                {{ form.hidden_tag() }}
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold" for="{{ form.username.id }}">
+                        <i class="fas fa-user me-1" aria-hidden="true"></i>{{ form.username.label.text }}
+                    </label>
+                    {{ form.username(class="form-control form-control-lg", placeholder="Ingrese su usuario", autocomplete="username", autofocus=true) }}
+                    {% for error in form.username.errors %}
+                        <div class="text-danger small mt-1" role="alert">{{ error }}</div>
+                    {% endfor %}
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label fw-semibold" for="{{ form.password.id }}">
+                        <i class="fas fa-lock me-1" aria-hidden="true"></i>{{ form.password.label.text }}
+                    </label>
+                    <div class="input-group">
+                        {{ form.password(class="form-control form-control-lg", placeholder="Ingrese su contraseña", autocomplete="current-password") }}
+                        <button class="btn btn-outline-secondary" type="button" id="toggle-password"
+                                data-target="{{ form.password.id }}" aria-label="Mostrar contraseña" aria-pressed="false">
+                            <i class="fas fa-eye" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                    {% for error in form.password.errors %}
+                        <div class="text-danger small mt-1" role="alert">{{ error }}</div>
+                    {% endfor %}
+                </div>
+
+                {{ form.submit(class="btn btn-primary btn-lg w-100") }}
+            </form>
+        </div>
+        <div class="card-footer text-center bg-light">
+            <small class="text-muted">
+                <i class="fas fa-shield-alt me-1"></i> Departamento de Bioestadística
+            </small>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,121 @@
+{% extends 'base.html' %}
+
+{% block title %}Bitácora de Auditoría{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold mb-0">
+        <i class="fas fa-history me-2 text-primary"></i>Bitácora de Auditoría
+    </h4>
+</div>
+
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label small fw-semibold">Usuario</label>
+                <select name="user_id" class="form-select form-select-sm">
+                    <option value="">Todos</option>
+                    {% for u in usuarios %}
+                        <option value="{{ u.id }}" {% if current_user_id == u.id %}selected{% endif %}>{{ u.username }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-semibold">Acción</label>
+                <select name="accion" class="form-select form-select-sm">
+                    <option value="">Todas</option>
+                    <option value="INSERT" {% if current_accion == 'INSERT' %}selected{% endif %}>INSERT</option>
+                    <option value="UPDATE" {% if current_accion == 'UPDATE' %}selected{% endif %}>UPDATE</option>
+                    <option value="DELETE" {% if current_accion == 'DELETE' %}selected{% endif %}>DELETE</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-semibold">Tabla</label>
+                <select name="tabla" class="form-select form-select-sm">
+                    <option value="">Todas</option>
+                    <option value="usuarios" {% if current_tabla == 'usuarios' %}selected{% endif %}>usuarios</option>
+                    <option value="centros" {% if current_tabla == 'centros' %}selected{% endif %}>centros</option>
+                    <option value="tipo_certificados" {% if current_tabla == 'tipo_certificados' %}selected{% endif %}>tipo_certificados</option>
+                    <option value="recepcion_folios" {% if current_tabla == 'recepcion_folios' %}selected{% endif %}>recepcion_folios</option>
+                    <option value="folios" {% if current_tabla == 'folios' %}selected{% endif %}>folios</option>
+                    <option value="entrega_folios" {% if current_tabla == 'entrega_folios' %}selected{% endif %}>entrega_folios</option>
+                    <option value="devolucion_folios" {% if current_tabla == 'devolucion_folios' %}selected{% endif %}>devolucion_folios</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-primary btn-sm w-100">
+                    <i class="fas fa-filter me-1"></i>Filtrar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body">
+        <div class="row g-3 align-items-center">
+            <div class="col-md-4">
+                <input type="text" class="form-control form-control-sm" id="tableSearch" placeholder="Buscar en tabla...">
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="auditoria-table">
+                <thead class="table-light">
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Usuario</th>
+                        <th>Acción</th>
+                        <th>Tabla</th>
+                        <th>ID Registro</th>
+                        <th>IP</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs %}
+                    <tr>
+                        <td>{{ (log.fecha|localtime).strftime('%d/%m/%Y %H:%M') }}</td>
+                        <td><span class="badge bg-primary">{{ log.usuario.username }}</span></td>
+                        <td>
+                            {% if log.accion == 'INSERT' %}
+                                <span class="badge bg-success">{{ log.accion }}</span>
+                            {% elif log.accion == 'UPDATE' %}
+                                <span class="badge bg-warning text-dark">{{ log.accion }}</span>
+                            {% elif log.accion == 'DELETE' %}
+                                <span class="badge bg-danger">{{ log.accion }}</span>
+                            {% endif %}
+                        </td>
+                        <td><code>{{ log.tabla }}</code></td>
+                        <td>{{ log.registro_id }}</td>
+                        <td><small class="text-muted">{{ log.ip_address }}</small></td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-4">
+                            <i class="fas fa-history fa-2x mb-2 d-block"></i>
+                            No hay registros de auditoría
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% from 'components/pagination.html' import render_pagination %}
+{{ render_pagination(pagination) }}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.getElementById('tableSearch').addEventListener('input', function() {
+        const text = this.value.toLowerCase();
+        document.querySelectorAll('#auditoria-table tbody tr').forEach(row => {
+            row.style.display = row.textContent.toLowerCase().includes(text) ? '' : 'none';
+        });
+    });
+</script>
+{% endblock %}

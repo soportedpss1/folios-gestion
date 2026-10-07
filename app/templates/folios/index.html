@@ -1,0 +1,238 @@
+{% extends 'base.html' %}
+{% from 'components/pagination.html' import render_pagination %}
+
+{% block title %}Folios{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold mb-0">
+        <i class="fas fa-file-alt me-2 text-primary"></i>{{ marca.nombre }}
+    </h4>
+    {% if puede('folios.importar') %}
+    <a href="{{ url_for('folios.importar') }}" class="btn btn-outline-success">
+        <i class="fas fa-file-import me-1"></i>Validar Digitado
+    </a>
+    {% endif %}
+</div>
+
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3 align-items-end">
+            <div class="col-md-2">
+                <label class="form-label small fw-semibold">Año</label>
+                <select name="anioCert" class="form-select form-select-sm">
+                    <option value="">Todos</option>
+                    {% for y in range(anio_actual - 1, anio_actual + 5) %}
+                        <option value="{{ y }}" {% if current_anio == y %}selected{% endif %}>{{ y }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-semibold">Tipo Certificado</label>
+                <select name="tipoCert" class="form-select form-select-sm">
+                    <option value="">Todos</option>
+                    {% for t in tipos %}
+                        <option value="{{ t.id }}" {% if current_tipo == t.id %}selected{% endif %}>{{ t.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-semibold">Estado</label>
+                <select name="estado" class="form-select form-select-sm">
+                    <option value="">Todos</option>
+                    <option value="disponible" {% if current_estado == 'disponible' %}selected{% endif %}>Disponible</option>
+                    <option value="entregado" {% if current_estado == 'entregado' %}selected{% endif %}>Entregado</option>
+                    <option value="devuelto" {% if current_estado == 'devuelto' %}selected{% endif %}>Devuelto</option>
+                    <option value="digitado" {% if current_estado == 'digitado' %}selected{% endif %}>Digitado</option>
+                    <option value="escaneado" {% if current_estado == 'escaneado' %}selected{% endif %}>Escaneado</option>
+                    <option value="nulo" {% if current_estado == 'nulo' %}selected{% endif %}>Nulo</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-semibold">Buscar Folio</label>
+                <input type="text" name="busqueda" class="form-control form-control-sm" placeholder="Número de folio..." value="{{ current_busqueda or '' }}" inputmode="numeric" autocomplete="off">
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary btn-sm w-100">
+                    <i class="fas fa-search me-1"></i>Filtrar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="folios-table">
+                <thead class="table-light">
+                    <tr>
+                        <th>Folio</th>
+                        <th>Tipo</th>
+                        <th>Año</th>
+                        <th>Estado</th>
+                        <th>Digitado</th>
+                        <th>Escaneado</th>
+                        <th>Nulo</th>
+                        {% if puede('folios.actualizar') %}
+                        <th class="text-center">Acciones</th>
+                        {% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for f in folios %}
+                    <tr>
+                        <td class="col-folio"><a href="{{ url_for('folios.details', id=f.id) }}" class="fw-bold text-decoration-none">{{ f.folio }}</a></td>
+                        <td><span class="badge" style="background-color: {{ f.tipo_cert.color or '#0D6EFD' }}">{{ f.tipo_cert.name }}</span></td>
+                        <td>{{ f.anioCert }}</td>
+                        <td>
+                            {% if f.estado == 'disponible' %}
+                                <span class="badge bg-secondary">Disponible</span>
+                            {% elif f.estado == 'entregado' %}
+                                <span class="badge bg-danger">Entregado</span>
+                            {% elif f.estado == 'devuelto' %}
+                                <span class="badge bg-success">Devuelto</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if f.digitado %}
+                                <i class="fas fa-check-circle text-success" aria-hidden="true"></i><span class="visually-hidden">Sí</span>
+                            {% else %}
+                                <i class="fas fa-times-circle text-muted" aria-hidden="true"></i><span class="visually-hidden">No</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if f.escaneado %}
+                                <i class="fas fa-check-circle text-success" aria-hidden="true"></i><span class="visually-hidden">Sí</span>
+                            {% else %}
+                                <i class="fas fa-times-circle text-muted" aria-hidden="true"></i><span class="visually-hidden">No</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if f.nulo %}
+                                <i class="fas fa-check-circle text-success" aria-hidden="true"></i><span class="visually-hidden">Sí</span>
+                            {% else %}
+                                <i class="fas fa-times-circle text-muted" aria-hidden="true"></i><span class="visually-hidden">No</span>
+                            {% endif %}
+                        </td>
+                        {% if puede('folios.actualizar') %}
+                        <td class="text-center">
+                            <a href="{{ url_for('folios.details', id=f.id) }}" class="btn btn-sm btn-outline-primary" title="Ver detalles" aria-label="Ver detalles del folio {{ f.folio }}">
+                                <i class="fas fa-eye" aria-hidden="true"></i>
+                            </a>
+                            <button type="button" class="btn btn-sm btn-outline-warning" title="Editar estado" aria-label="Editar estado del folio {{ f.folio }}" onclick="openEditModal({{ f.id }}, '{{ f.folio }}', {{ f.digitado|lower }}, {{ f.escaneado|lower }}, {{ f.nulo|lower }})">
+                                <i class="fas fa-edit" aria-hidden="true"></i>
+                            </button>
+                        </td>
+                        {% endif %}
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="{{ 8 if puede('folios.actualizar') else 7 }}" class="text-center text-muted py-4">
+                            <i class="fas fa-file-alt fa-2x mb-2 d-block"></i>
+                            No se encontraron folios
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{{ render_pagination(pagination) }}
+
+<!-- Modal para editar estado -->
+<div class="modal fade" id="statusModal" tabindex="-1" aria-labelledby="statusModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="statusModalLabel">
+                    <i class="fas fa-edit me-2"></i>Actualizar Estado
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted mb-3" id="modal-info"></p>
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="modal-digitado">
+                    <label class="form-check-label fw-semibold" for="modal-digitado">
+                        <i class="fas fa-keyboard me-1 text-primary"></i>Digitado
+                    </label>
+                </div>
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="modal-escaneado">
+                    <label class="form-check-label fw-semibold" for="modal-escaneado">
+                        <i class="fas fa-camera me-1 text-info"></i>Escaneado
+                    </label>
+                </div>
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="modal-nulo">
+                    <label class="form-check-label fw-semibold" for="modal-nulo">
+                        <i class="fas fa-ban me-1 text-danger"></i>Nulo
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="saveStatus()">
+                    <i class="fas fa-save me-1"></i>Guardar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let selectedFolios = [];
+
+    function openEditModal(id, folio, digitado, escaneado, nulo) {
+        selectedFolios = [id];
+        document.getElementById('modal-info').textContent = `Folio: ${folio}`;
+        document.getElementById('modal-digitado').checked = digitado;
+        document.getElementById('modal-escaneado').checked = escaneado;
+        document.getElementById('modal-nulo').checked = nulo;
+        new bootstrap.Modal(document.getElementById('statusModal')).show();
+    }
+
+    function saveStatus() {
+        const digitado = document.getElementById('modal-digitado').checked;
+        const escaneado = document.getElementById('modal-escaneado').checked;
+        const nulo = document.getElementById('modal-nulo').checked;
+
+        fetch('{{ url_for("folios.update_status") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                folio_ids: selectedFolios,
+                digitado: digitado,
+                escaneado: escaneado,
+                nulo: nulo
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Actualizado',
+                    text: data.message,
+                    timer: 1500,
+                    showConfirmButton: false
+                }).then(() => {
+                    location.reload();
+                });
+            } else {
+                Swal.fire('Error', data.message, 'error');
+            }
+        })
+        .catch(error => {
+            Swal.fire('Error', 'Error de conexión.', 'error');
+        });
+    }
+</script>
+{% endblock %}

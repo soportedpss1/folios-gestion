@@ -1,0 +1,301 @@
+{% extends 'base.html' %}
+
+{% block title %}Detalle: {{ centro.name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold mb-0">
+        <i class="fas fa-hospital me-2 text-primary"></i>{{ centro.name }}
+    </h4>
+    <div class="d-flex gap-2">
+        <div class="btn-group">
+            <a href="{{ url_for('centros.export_excel', id=centro.id) }}" class="btn btn-success btn-sm">
+                <i class="fas fa-file-excel me-1"></i>Excel
+            </a>
+            <a href="{{ url_for('centros.export_pdf', id=centro.id) }}" class="btn btn-danger btn-sm">
+                <i class="fas fa-file-pdf me-1"></i>PDF
+            </a>
+        </div>
+        <a href="{{ url_for('centros.index') }}" class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-arrow-left me-1"></i>Volver
+        </a>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <h6 class="card-title text-muted mb-3"><i class="fas fa-info-circle me-1"></i>Información del Centro</h6>
+                <table class="table table-borderless mb-0">
+                    <tr>
+                        <td class="text-muted" style="width:40%">Nombre</td>
+                        <td class="fw-bold">{{ centro.name }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Teléfono</td>
+                        <td>{{ centro.telefono or '-' }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Dirección</td>
+                        <td>{{ centro.direccion or '-' }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Estado</td>
+                        <td>
+                            {% if centro.activo %}
+                                <span class="badge bg-success">Activo</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Inactivo</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        <div class="row g-3 h-100 align-items-center">
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm bg-primary text-white">
+                    <div class="card-body text-center">
+                        <h2 class="mb-0">{{ entregas|length }}</h2>
+                        <small>Total Entregados</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm bg-warning text-dark">
+                    <div class="card-body text-center">
+                        <h2 class="mb-0">{{ pendientes|length }}</h2>
+                        <small>Pendientes Devolución</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm bg-success text-white">
+                    <div class="card-body text-center">
+                        <h2 class="mb-0">{{ devueltos|length }}</h2>
+                        <small>Devueltos</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<ul class="nav nav-tabs mb-3" role="tablist">
+    <li class="nav-item">
+        <a class="nav-link active" data-bs-toggle="tab" href="#tab-pendientes">
+            <i class="fas fa-clock me-1 text-warning"></i>Pendientes ({{ pendientes|length }})
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" data-bs-toggle="tab" href="#tab-todos">
+            <i class="fas fa-list me-1 text-primary"></i>Todos Entregados ({{ entregas|length }})
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" data-bs-toggle="tab" href="#tab-devueltos">
+            <i class="fas fa-check-circle me-1 text-success"></i>Devueltos ({{ devueltos|length }})
+        </a>
+    </li>
+</ul>
+
+<div class="tab-content">
+    <div class="tab-pane fade show active" id="tab-pendientes">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0" id="table-pendientes">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Folio</th>
+                                <th>Tipo Certificado</th>
+                                <th>Fecha Entrega</th>
+                                <th>Entregado por</th>
+                                <th class="text-center">Días en Centro</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for e in pendientes %}
+                            {% set dias = (hoy - e.fechaEntrega).days %}
+                            <tr>
+                                <td class="col-folio"><a href="{{ url_for('folios.details', id=e.folio_id) }}" class="badge bg-primary text-decoration-none">{{ e.folio.folio }}</a></td>
+                                <td>{{ e.folio.tipo_cert.name }}</td>
+                                <td>{{ e.fechaEntrega.strftime('%d/%m/%Y') }}</td>
+                                <td><span class="badge bg-secondary">{{ e.usuario.username }}</span></td>
+                                <td class="text-center">
+                                    {% if dias > 30 %}
+                                        <span class="badge bg-danger">{{ dias }} días</span>
+                                    {% elif dias > 15 %}
+                                        <span class="badge bg-warning text-dark">{{ dias }} días</span>
+                                    {% else %}
+                                        <span class="badge bg-info">{{ dias }} días</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-4">
+                                    <i class="fas fa-check-circle fa-2x mb-2 d-block text-success"></i>
+                                    No hay folios pendientes de devolución
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="tab-pane fade" id="tab-todos">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0" id="table-todos">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Folio</th>
+                                <th>Tipo Certificado</th>
+                                <th>Estado</th>
+                                <th>F. Entrega</th>
+                                <th>Entregado por</th>
+                                <th>F. Devolución</th>
+                                <th>Recibido Por</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for e in entregas %}
+                            {% set folio = e.folio %}
+                            <tr>
+                                <td class="col-folio"><a href="{{ url_for('folios.details', id=folio.id) }}" class="badge bg-primary text-decoration-none">{{ folio.folio }}</a></td>
+                                <td>{{ folio.tipo_cert.name }}</td>
+                                <td>
+                                    {% if folio.estado == 'entregado' %}
+                                        <span class="badge bg-danger">Entregado</span>
+                                    {% elif folio.estado == 'devuelto' %}
+                                        <span class="badge bg-success">Devuelto</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">{{ folio.estado }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ e.fechaEntrega.strftime('%d/%m/%Y') }}</td>
+                                <td><span class="badge bg-secondary">{{ e.usuario.username }}</span></td>
+                                <td>
+                                    {% if folio.devolucion %}
+                                        {{ folio.devolucion.fechaDevolucion.strftime('%d/%m/%Y') }}
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if folio.devolucion and folio.devolucion.usuario %}
+                                        <span class="badge bg-success">{{ folio.devolucion.usuario.username }}</span>
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="7" class="text-center text-muted py-4">
+                                    <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
+                                    No hay entregas registradas para este centro
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="tab-pane fade" id="tab-devueltos">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0" id="table-devueltos">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Folio</th>
+                                <th>Tipo Certificado</th>
+                                <th>F. Entrega</th>
+                                <th>F. Devolución</th>
+                                <th>Recibido Por</th>
+                                <th class="text-center">Días en Centro</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for d in devueltos %}
+                            {% set dias = (d.fechaDevolucion - d.folio.entrega.fechaEntrega).days if d.folio.entrega else 0 %}
+                            <tr>
+                                <td class="col-folio"><a href="{{ url_for('folios.details', id=d.folio_id) }}" class="badge bg-success text-decoration-none">{{ d.folio.folio }}</a></td>
+                                <td>{{ d.folio.tipo_cert.name }}</td>
+                                <td>
+                                    {% if d.folio.entrega %}
+                                        {{ d.folio.entrega.fechaEntrega.strftime('%d/%m/%Y') }}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                <td>{{ d.fechaDevolucion.strftime('%d/%m/%Y') }}</td>
+                                <td><span class="badge bg-success">{{ d.usuario.username }}</span></td>
+                                <td class="text-center">
+                                    <span class="badge bg-info">{{ dias }} días</span>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="6" class="text-center text-muted py-4">
+                                    <i class="fas fa-undo fa-2x mb-2 d-block"></i>
+                                    No hay devoluciones registradas para este centro
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    var tables = {};
+    var dtConfig = {
+        {% include 'components/datatables_lang.html' %}
+        pageLength: 10,
+        lengthMenu: [10, 25, 50, 100],
+        order: [],
+        dom: '<"row"<"col-sm-6"l><"col-sm-6"f>>rtip'
+    };
+
+    function initTable(id) {
+        if (!tables[id]) {
+            var $t = $('#' + id);
+            // DataTables no soporta colspan en tbody (tn/18): si la tabla está
+            // vacía (fila de estado con colspan) no se inicializa.
+            if ($t.find('tbody td[colspan]').length) {
+                return;
+            }
+            tables[id] = $t.DataTable(dtConfig);
+        }
+    }
+
+    initTable('table-pendientes');
+
+    $('a[data-bs-toggle="tab"]').on('shown.bs.tab', function(e) {
+        var target = $(e.target).attr('href');
+        if (target === '#tab-todos') initTable('table-todos');
+        else if (target === '#tab-devueltos') initTable('table-devueltos');
+    });
+});
+</script>
+{% endblock %}

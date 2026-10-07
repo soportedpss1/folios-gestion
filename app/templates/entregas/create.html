@@ -1,0 +1,141 @@
+{% extends 'base.html' %}
+
+{% block title %}Nueva Entrega{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold mb-0">
+        <i class="fas fa-plus-circle me-2 text-primary"></i>Nueva Entrega de Folios
+    </h4>
+    <a href="{{ url_for('entregas.index') }}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-1"></i>Volver
+    </a>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-4">
+                <form method="POST" data-loading>
+                    {{ form.hidden_tag() }}
+
+                    <div class="row g-3">
+                        <div class="col-md-12">
+                            <label class="form-label fw-semibold">
+                                {{ form.folio_ids.label.text }}
+                                <span class="badge bg-info ms-2" id="selected-count">0 seleccionados</span>
+                            </label>
+                            <label class="form-label fw-semibold" for="tipo-select">Tipo de certificado</label>
+                            <select id="tipo-select" name="tipoFilter" class="form-select mb-2">
+                                <option value="">Seleccione un tipo de certificado</option>
+                                {% for t in tipos %}
+                                    <option value="{{ t.id }}"{% if t.id == tipo_actual %} selected{% endif %}>{{ t.name }}</option>
+                                {% endfor %}
+                            </select>
+                            {{ form.folio_ids(class="form-select", size="10", id="folio-select") }}
+                            <small class="text-muted" id="folio-hint">Seleccione un tipo de certificado para ver los folios</small>
+                            {% for error in form.folio_ids.errors %}
+                                <div class="text-danger small mt-1" role="alert">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">{{ form.fechaEntrega.label.text }}</label>
+                            {{ form.fechaEntrega(class="form-control") }}
+                            {% for error in form.fechaEntrega.errors %}
+                                <div class="text-danger small mt-1" role="alert">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">{{ form.centroId.label.text }}</label>
+                            {{ form.centroId(class="form-select") }}
+                            {% for error in form.centroId.errors %}
+                                <div class="text-danger small mt-1" role="alert">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <div class="d-flex justify-content-end gap-2">
+                        <a href="{{ url_for('entregas.index') }}" class="btn btn-outline-secondary">Cancelar</a>
+                        {{ form.submit(class="btn btn-primary") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const select = document.getElementById('folio-select');
+    const counter = document.getElementById('selected-count');
+    const tipoSelect = document.getElementById('tipo-select');
+    const hint = document.getElementById('folio-hint');
+
+    // Sin campo de búsqueda: se carga el total de folios del tipo elegido
+    const LIMIT = 10000;
+    const HINT_TIPO = 'Seleccione un tipo de certificado para ver los folios';
+    const HINT_OK = 'Seleccione con Ctrl (o Cmd en Mac) para marcar varios';
+
+    function updateCounter() {
+        const n = select.selectedOptions.length;
+        counter.textContent = n === 1 ? '1 seleccionado' : n + ' seleccionados';
+    }
+
+    select.addEventListener('change', updateCounter);
+
+    function limpiarFolios() {
+        select.innerHTML = '';
+        updateCounter();
+    }
+
+    // Folios disponibles contra /entregas/api/folios-disponibles.
+    // Sin tipo de certificado no se piden folios; con tipo se piden todos.
+    async function loadFolios() {
+        const tipo = tipoSelect.value;
+        if (!tipo) {
+            hint.textContent = HINT_TIPO;
+            return;
+        }
+        hint.textContent = HINT_OK;
+        try {
+            const resp = await fetch(`{{ url_for('entregas.folios_disponibles') }}?tipo=${encodeURIComponent(tipo)}&limit=${LIMIT}`);
+            if (!resp.ok) return;
+            const items = await resp.json();
+            const seleccionados = Array.from(select.selectedOptions)
+                .map(o => ({ value: o.value, text: o.text }));
+            select.innerHTML = '';
+            for (const item of items) {
+                if (seleccionados.some(s => s.value == item.id)) continue;
+                const opt = document.createElement('option');
+                opt.value = item.id;
+                opt.text = item.texto;
+                select.appendChild(opt);
+            }
+            for (const s of seleccionados) {
+                const opt = document.createElement('option');
+                opt.value = s.value;
+                opt.text = s.text;
+                opt.selected = true;
+                select.appendChild(opt);
+            }
+        } catch (e) { /* red caída: se mantiene el select actual */ }
+    }
+
+    // Cambiar de tipo (incluido volver al placeholder) limpia lista y selección
+    tipoSelect.addEventListener('change', function () {
+        limpiarFolios();
+        loadFolios();
+    });
+
+    if (tipoSelect.value) {
+        loadFolios();
+    } else {
+        hint.textContent = HINT_TIPO;
+    }
+</script>
+{% endblock %}

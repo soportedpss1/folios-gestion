@@ -1,0 +1,113 @@
+{% extends 'base.html' %}
+
+{% block title %}Importar Folios{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold mb-0">
+        <i class="fas fa-file-import me-2 text-primary"></i>Importar Folios
+    </h4>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('folios.plantilla') }}" class="btn btn-outline-success">
+            <i class="fas fa-download me-1"></i>Descargar plantilla
+        </a>
+        <a href="{{ url_for('folios.index') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i>Volver
+        </a>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-body p-4">
+                <p class="text-muted mb-3">
+                    El archivo debe tener exactamente esta columna en la fila 1:
+                    <code>folio</code>. Una fila por número de folio (máx. 5000
+                    filas). Cada número que coincida con la base de datos marca
+                    sus folios como <strong>digitado</strong>. Un mismo número
+                    puede repetirse entre años/tipos: se marcan todas las
+                    coincidencias.
+                </p>
+                <form method="POST" enctype="multipart/form-data">
+                    {{ form.hidden_tag() }}
+                    <div class="row g-3 align-items-end">
+                        <div class="col-md-8">
+                            <label class="form-label fw-semibold">{{ form.archivo.label.text }}</label>
+                            {{ form.archivo(class="form-control") }}
+                            {% for error in form.archivo.errors %}
+                                <div class="text-danger small mt-1" role="alert">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.submit(class="btn btn-primary w-100") }}
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        {% if preview %}
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-body p-4">
+                <div class="alert {% if total_validas %}alert-info{% else %}alert-danger{% endif %} mb-3">
+                    <i class="fas fa-list-check me-1"></i>
+                    <strong>{{ total_validas }}</strong> folio(s) válido(s) de <strong>{{ preview|length }}</strong>.
+                    {% if preview|length > max_mostrar %}
+                        Se muestran las primeras {{ max_mostrar }}.
+                    {% endif %}
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width:60px">#</th>
+                                <th>Folio</th>
+                                <th>Coincidencias</th>
+                                <th>Ya digitado</th>
+                                <th>A marcar</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for p in preview[:max_mostrar] %}
+                            <tr>
+                                <td>{{ p.n }}</td>
+                                <td>{{ p.folio }}</td>
+                                <td>{{ p.encontrados if p.encontrados is not none else '—' }}</td>
+                                <td>{{ p.ya_digitado if p.encontrados is not none else '—' }}</td>
+                                <td>{{ p.a_actualizar if p.encontrados is not none else '—' }}</td>
+                                <td>
+                                    {% if p.error %}
+                                        <span class="badge bg-danger">{{ p.error }}</span>
+                                    {% elif p.a_actualizar == 0 %}
+                                        <span class="badge bg-secondary">Ya digitado</span>
+                                    {% else %}
+                                        <span class="badge bg-success">A marcar</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                {% if total_validas %}
+                <form method="POST" action="{{ url_for('folios.importar_confirmar') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="payload" value="{{ payload_json }}">
+                    <div class="d-flex justify-content-end gap-2">
+                        <a href="{{ url_for('folios.importar') }}" class="btn btn-outline-secondary">Cancelar</a>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-file-import me-1"></i>Confirmar importación
+                        </button>
+                    </div>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,134 @@
+{% extends 'base.html' %}
+
+{% block title %}Importar Entregas{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold mb-0">
+        <i class="fas fa-file-import me-2 text-primary"></i>Importar Entregas
+    </h4>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('entregas.plantilla') }}" class="btn btn-outline-success">
+            <i class="fas fa-download me-1"></i>Descargar plantilla
+        </a>
+        <a href="{{ url_for('entregas.index') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i>Volver
+        </a>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-body p-4">
+                <p class="text-muted mb-3">
+                    El archivo debe tener exactamente estas columnas en la fila 1:
+                    <code>folio</code>, <code>tipoCert</code>, <code>anioCert</code> y
+                    opcionalmente <code>usuario</code> (username del responsable; si se
+                    omite o la celda está vacía, el registro queda a nombre de quien
+                    importa). Una fila por folio (máx. 5000 filas). El centro y la
+                    fecha se toman de este formulario.
+                </p>
+                <form method="POST" enctype="multipart/form-data">
+                    {{ form.hidden_tag() }}
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">{{ form.centroId.label.text }}</label>
+                            {{ form.centroId(class="form-select") }}
+                            {% for error in form.centroId.errors %}
+                                <div class="text-danger small mt-1" role="alert">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">{{ form.fechaEntrega.label.text }}</label>
+                            {{ form.fechaEntrega(class="form-control") }}
+                            {% for error in form.fechaEntrega.errors %}
+                                <div class="text-danger small mt-1" role="alert">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label fw-semibold">{{ form.archivo.label.text }}</label>
+                            {{ form.archivo(class="form-control") }}
+                            {% for error in form.archivo.errors %}
+                                <div class="text-danger small mt-1" role="alert">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            {{ form.submit(class="btn btn-primary w-100") }}
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        {% if preview %}
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-body p-4">
+                <div class="alert {% if total_validas %}alert-info{% else %}alert-danger{% endif %} mb-3">
+                    <i class="fas fa-list-check me-1"></i>
+                    <strong>{{ total_validas }}</strong> folio(s) válido(s) de <strong>{{ preview|length }}</strong>
+                    para <strong>{{ centro_nombre }}</strong> con fecha <strong>{{ fecha_valor.strftime('%d/%m/%Y') if fecha_valor else '?' }}</strong>.
+                    {% set responsables = preview|selectattr('usuario')|map(attribute='usuario')|unique|list %}
+                    {% if responsables %}
+                    A nombre de <strong>{{ responsables[:3]|join(', ') }}{{ ' y más' if responsables|length > 3 else '' }}</strong>.
+                    {% endif %}
+                    {% if preview|length > max_mostrar %}
+                        Se muestran las primeras {{ max_mostrar }}.
+                    {% endif %}
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width:60px">#</th>
+                                <th>Folio</th>
+                                <th>Usuario</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for p in preview[:max_mostrar] %}
+                            <tr>
+                                <td>{{ p.n }}</td>
+                                <td class="col-folio">{{ p.etiqueta }}</td>
+                                <td>
+                                    {% if p.usuario %}
+                                        <span class="badge bg-secondary">{{ p.usuario }}</span>
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if p.error %}
+                                        <span class="badge bg-danger">{{ p.error }}</span>
+                                    {% else %}
+                                        <span class="badge bg-success">Válido</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                {% if total_validas %}
+                <form method="POST" action="{{ url_for('entregas.importar_confirmar') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="payload" value="{{ payload_json }}">
+                    <input type="hidden" name="centroId" value="{{ form.centroId.data }}">
+                    <input type="hidden" name="fecha" value="{{ fecha_valor.isoformat() if fecha_valor else '' }}">
+                    <div class="d-flex justify-content-end gap-2">
+                        <a href="{{ url_for('entregas.importar') }}" class="btn btn-outline-secondary">Cancelar</a>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-file-import me-1"></i>Confirmar importación
+                        </button>
+                    </div>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,148 @@
+{% extends 'base.html' %}
+
+{% block title %}Reportes{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold mb-0">
+        <i class="fas fa-chart-bar me-2 text-primary"></i>Reportes
+    </h4>
+    <div class="btn-group">
+        <a href="#" id="exportExcel" class="btn btn-success" style="display:none;">
+            <i class="fas fa-file-excel me-1"></i>Exportar Excel
+        </a>
+        <a href="#" id="exportPdf" class="btn btn-danger" style="display:none;">
+            <i class="fas fa-file-pdf me-1"></i>Exportar PDF
+        </a>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+        <form method="GET" id="filterForm" class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label small fw-semibold">Año</label>
+                <select name="anioCert" class="form-select form-select-sm">
+                    {% for y in range(2025, 2031) %}
+                        <option value="{{ y }}" {% if current_anio == y %}selected{% endif %}>{{ y }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small fw-semibold">Tipo Certificado</label>
+                <select name="tipoCert" class="form-select form-select-sm">
+                    <option value="">Todos</option>
+                    {% for t in tipos %}
+                        <option value="{{ t.id }}">{{ t.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-semibold">Centro</label>
+                <select name="centroId" class="form-select form-select-sm">
+                    <option value="">Todos</option>
+                    {% for c in centros %}
+                        <option value="{{ c.id }}">{{ c.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-semibold">Estado</label>
+                <select name="estado" class="form-select form-select-sm">
+                    <option value="">Todos</option>
+                    <option value="disponible">Disponible</option>
+                    <option value="entregado">Entregado</option>
+                    <option value="devuelto">Devuelto</option>
+                    <option value="nulo">Nulo</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary btn-sm w-100">
+                    <i class="fas fa-filter me-1"></i>Filtrar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm bg-primary text-white">
+            <div class="card-body text-center">
+                <h3 class="mb-0" id="statTotal">0</h3>
+                <small>Total Folios</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm bg-secondary text-white">
+            <div class="card-body text-center">
+                <h3 class="mb-0" id="statDisponibles">0</h3>
+                <small>Disponibles</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm bg-danger text-white">
+            <div class="card-body text-center">
+                <h3 class="mb-0" id="statEntregados">0</h3>
+                <small>Entregados</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm bg-success text-white">
+            <div class="card-body text-center">
+                <h3 class="mb-0" id="statDevueltos">0</h3>
+                <small>Devueltos</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center">
+        <h6 class="mb-0 fw-semibold">Detalle de Folios</h6>
+        <input type="text" class="form-control form-control-sm w-auto" id="tableSearch" placeholder="Buscar en tabla...">
+    </div>
+    <div class="card-body p-0">
+        <div id="loadingSpinner" class="text-center py-5" style="display:none;">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Cargando...</span>
+            </div>
+            <p class="mt-2 text-muted small">Cargando datos...</p>
+        </div>
+        <div id="emptyState" class="text-center py-5">
+            <i class="fas fa-filter fa-3x text-muted mb-3"></i>
+            <p class="text-muted">Use los filtros y haga click en <strong>Filtrar</strong> para cargar los datos</p>
+        </div>
+        <div class="table-responsive" id="tableContainer" style="display:none;">
+            <table class="table table-hover align-middle mb-0" id="reportes-table">
+                <thead class="table-light">
+                    <tr>
+                        <th>Folio</th>
+                        <th>Tipo</th>
+                        <th>Año</th>
+                        <th>Centro</th>
+                        <th>Estado</th>
+                        <th>Digitado</th>
+                        <th>Escaneado</th>
+                        <th>Nulo</th>
+                        <th>F. Entrega</th>
+                        <th>Entregado por</th>
+                        <th>F. Devolución</th>
+                        <th>Recibido Por</th>
+                    </tr>
+                </thead>
+                <tbody id="reportesBody">
+                </tbody>
+            </table>
+        </div>
+        <div id="paginationContainer" class="px-3 pb-3"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/reports.js') }}"></script>
+{% endblock %}

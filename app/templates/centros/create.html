@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+
+{% block title %}Nuevo Centro{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold mb-0">
+        <i class="fas fa-plus-circle me-2 text-primary"></i>Nuevo Centro de Salud
+    </h4>
+    <a href="{{ url_for('centros.index') }}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-1"></i>Volver
+    </a>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-4">
+                <form method="POST" data-loading>
+                    {{ form.hidden_tag() }}
+
+                    <div class="row g-3">
+                        <div class="col-md-12">
+                            <label class="form-label fw-semibold">{{ form.name.label.text }}</label>
+                            {{ form.name(class="form-control", placeholder="Nombre del centro de salud") }}
+                            {% for error in form.name.errors %}
+                                <div class="text-danger small mt-1" role="alert">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">{{ form.telefono.label.text }}</label>
+                            {{ form.telefono(class="form-control", placeholder="Teléfono de contacto") }}
+                            {% for error in form.telefono.errors %}
+                                <div class="text-danger small mt-1" role="alert">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">{{ form.direccion.label.text }}</label>
+                            {{ form.direccion(class="form-control", placeholder="Dirección del centro") }}
+                            {% for error in form.direccion.errors %}
+                                <div class="text-danger small mt-1" role="alert">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <div class="d-flex justify-content-end gap-2">
+                        <a href="{{ url_for('centros.index') }}" class="btn btn-outline-secondary">Cancelar</a>
+                        {{ form.submit(class="btn btn-primary") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

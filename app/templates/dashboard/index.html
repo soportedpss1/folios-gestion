@@ -1,0 +1,313 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold mb-0">
+        <i class="fas fa-tachometer-alt me-2 text-primary" aria-hidden="true"></i>Dashboard
+    </h4>
+    <span class="text-muted">Año: {{ year }}</span>
+</div>
+
+{% set kpi_list = [
+    ('total', total_folios, 'Total Folios', 'fa-file-alt', 'text-primary'),
+    ('digitado', digitados, 'Digitados', 'fa-check-circle', 'text-success'),
+    ('escaneado', escaneados, 'Escaneados', 'fa-qrcode', 'text-info'),
+    ('nulo', nulos, 'Nulos', 'fa-ban', 'text-warning'),
+    ('disponible', disponibles, 'Disponibles', 'fa-inbox', 'text-secondary'),
+    ('entregado', entregados, 'Entregados', 'fa-paper-plane', 'text-danger'),
+    ('devuelto', devueltos, 'Devueltos', 'fa-undo', 'text-success'),
+] %}
+
+<div class="row g-3 mb-4">
+    {% for key, valor, etiqueta, icono, color in kpi_list %}
+    <div class="col-6 col-md-4 col-xl">
+        <div class="card border-0 shadow-sm h-100 kpi-card" role="button" tabindex="0"
+             aria-label="{{ etiqueta }}: {{ valor }}. Ver desglose por tipo"
+             onclick="abrirModal('{{ key }}')">
+            <div class="card-body text-center">
+                <div class="{{ color }} mb-2">
+                    <i class="fas {{ icono }} fa-2x" aria-hidden="true"></i>
+                </div>
+                <h3 class="fw-bold mb-0 kpi-value">{{ valor }}</h3>
+                <small class="text-muted">{{ etiqueta }}</small>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Tendencia mensual -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center">
+        <h6 class="mb-0 fw-semibold">
+            <i class="fas fa-chart-line me-2 text-primary" aria-hidden="true"></i>Tendencia mensual
+        </h6>
+        <span class="text-muted small">Entregas y devoluciones — {{ year }}</span>
+    </div>
+    <div class="card-body">
+        <div id="tendencia-cargando" class="text-center py-5" role="status">
+            <div class="spinner-border text-primary" aria-hidden="true"></div>
+            <span class="visually-hidden">Cargando tendencia</span>
+        </div>
+        <div id="tendencia-error" class="text-danger text-center py-4" style="display:none;" role="alert">
+            <i class="fas fa-exclamation-circle me-1" aria-hidden="true"></i>No se pudo cargar la tendencia. Intente de nuevo.
+        </div>
+        <div id="tendencia-wrap" style="display:none; position:relative; height:320px;">
+            <canvas id="tendenciaChart" role="img"
+                    aria-label="Gráfico de líneas: entregas y devoluciones por mes del año {{ year }}"></canvas>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mt-2">
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-bottom">
+                <h6 class="mb-0 fw-semibold">
+                    <i class="fas fa-history me-2 text-primary" aria-hidden="true"></i>Últimas Entregas
+                </h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 data-table">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Folio</th>
+                                <th>Centro</th>
+                                <th>Fecha</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for entrega in entregas_recientes %}
+                            <tr>
+                                <td class="col-folio"><span class="badge bg-primary">{{ entrega.folio.folio }}</span></td>
+                                <td>{{ entrega.centro.name }}</td>
+                                <td>{{ (entrega.fechaEntrega).strftime('%d/%m/%Y') }}</td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td class="text-center text-muted py-3" colspan="3">No hay entregas registradas</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-bottom">
+                <h6 class="mb-0 fw-semibold">
+                    <i class="fas fa-undo me-2 text-success" aria-hidden="true"></i>Últimas Devoluciones
+                </h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 data-table">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Folio</th>
+                                <th>Centro</th>
+                                <th>Fecha</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for dev in devoluciones_recientes %}
+                            <tr>
+                                <td class="col-folio"><span class="badge bg-success">{{ dev.folio.folio }}</span></td>
+                                <td>{{ dev.centro.name }}</td>
+                                <td>{{ (dev.fechaDevolucion).strftime('%d/%m/%Y') }}</td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td class="text-center text-muted py-3" colspan="3">No hay devoluciones registradas</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal único de desglose por tipo (parametrizado por KPIS en JS) -->
+<div class="modal fade" id="kpiModal" tabindex="-1" aria-labelledby="kpiModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header" id="kpiModalHeader">
+                <h5 class="modal-title" id="kpiModalLabel">
+                    <i class="fas me-2" id="kpiModalIcon" aria-hidden="true"></i><span id="kpiModalTitulo"></span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar" id="kpiModalClose"></button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-spinner text-center py-4">
+                    <div class="spinner-border" id="kpiModalSpinner" role="status" aria-hidden="true"></div>
+                    <span class="visually-hidden">Cargando datos</span>
+                </div>
+                <div class="modal-content-box" style="display:none;">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr><th>Tipo de Certificado</th><th class="text-center">Cantidad</th></tr>
+                        </thead>
+                        <tbody class="modal-tbody"></tbody>
+                    </table>
+                    <div class="modal-vacio text-center text-muted py-3" style="display:none;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" integrity="sha384-9nhczxUqK87bcKHh20fSQcTGD4qq5GhayNYSYWqwBkINBhOfQLg/P5HG5lF1urn4" crossorigin="anonymous"></script>
+<script>
+    // Configuración por KPI: título, icono, color de cabecera y mensajes.
+    const KPIS = {
+        total:      { titulo: 'Total Folios por Tipo',        icono: 'fa-file-alt',     header: 'bg-primary text-white',  spinner: 'text-primary',  blanco: true,  vacio: 'No hay folios' },
+        digitado:   { titulo: 'Folios Digitados por Tipo',    icono: 'fa-check-circle', header: 'bg-success text-white',  spinner: 'text-success',  blanco: true,  vacio: 'No hay folios digitados' },
+        escaneado:  { titulo: 'Folios Escaneados por Tipo',   icono: 'fa-qrcode',       header: 'bg-info text-dark',      spinner: 'text-info',     blanco: false, vacio: 'No hay folios escaneados' },
+        nulo:       { titulo: 'Folios Nulos por Tipo',        icono: 'fa-ban',          header: 'bg-warning text-dark',   spinner: 'text-warning',  blanco: false, vacio: 'No hay folios nulos' },
+        disponible: { titulo: 'Folios Disponibles por Tipo',  icono: 'fa-inbox',        header: 'bg-secondary text-white', spinner: 'text-secondary', blanco: true, vacio: 'No hay folios disponibles' },
+        entregado:  { titulo: 'Folios Entregados por Tipo',   icono: 'fa-paper-plane',  header: 'bg-danger text-white',   spinner: 'text-danger',   blanco: true, vacio: 'No hay folios entregados' },
+        devuelto:   { titulo: 'Folios Devueltos por Tipo',    icono: 'fa-undo',         header: 'bg-success text-white',  spinner: 'text-success',  blanco: true, vacio: 'No hay folios devueltos' }
+    };
+
+    let kpiModalInstancia = null;
+    let kpiSolicitud = 0;   // token: descarta respuestas de KPIs ya cerrados
+
+    function abrirModal(filtro) {
+        const cfg = KPIS[filtro];
+        if (!cfg) return;
+        const solicitud = ++kpiSolicitud;
+
+        const modalEl = document.getElementById('kpiModal');
+        const spinner = modalEl.querySelector('.modal-spinner');
+        const content = modalEl.querySelector('.modal-content-box');
+        const tbody = modalEl.querySelector('.modal-tbody');
+        const vacio = modalEl.querySelector('.modal-vacio');
+
+        // Pintar cabecera/estados según la configuración del KPI.
+        document.getElementById('kpiModalHeader').className = 'modal-header ' + cfg.header;
+        document.getElementById('kpiModalIcon').className = 'fas ' + cfg.icono + ' me-2';
+        document.getElementById('kpiModalTitulo').textContent = cfg.titulo;
+        document.getElementById('kpiModalClose').className = 'btn-close' + (cfg.blanco ? ' btn-close-white' : '');
+        document.getElementById('kpiModalSpinner').className = 'spinner-border ' + cfg.spinner;
+        vacio.textContent = cfg.vacio;
+
+        spinner.style.display = 'block';
+        content.style.display = 'none';
+        tbody.innerHTML = '';
+        vacio.style.display = 'none';
+
+        if (!kpiModalInstancia) {
+            kpiModalInstancia = new bootstrap.Modal(modalEl);
+        }
+        kpiModalInstancia.show();
+
+        fetch("{{ url_for('dashboard.folios_por_tipo') }}?filter=" + encodeURIComponent(filtro))
+            .then(r => {
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                return r.json();
+            })
+            .then(data => {
+                if (solicitud !== kpiSolicitud) return;  // KPI cambiado: respuesta vieja
+                spinner.style.display = 'none';
+                content.style.display = 'block';
+                if (data.tipos.length === 0) {
+                    vacio.style.display = 'block';
+                    return;
+                }
+                data.tipos.forEach(t => {
+                    const tr = document.createElement('tr');
+                    const tdNombre = document.createElement('td');
+                    const badge = document.createElement('span');
+                    badge.className = 'badge';
+                    badge.style.backgroundColor = t.color;
+                    badge.textContent = t.nombre;
+                    tdNombre.appendChild(badge);
+                    const tdCantidad = document.createElement('td');
+                    tdCantidad.className = 'text-center fw-bold';
+                    tdCantidad.textContent = t.cantidad;
+                    tr.appendChild(tdNombre);
+                    tr.appendChild(tdCantidad);
+                    tbody.appendChild(tr);
+                });
+            })
+            .catch(() => {
+                if (solicitud !== kpiSolicitud) return;  // ni el error de una vieja molesta
+                spinner.style.display = 'none';
+                content.style.display = 'block';
+                Swal.fire('Error', 'No se pudieron cargar los datos. Intente de nuevo.', 'error');
+            });
+    }
+
+    // --- Tendencia mensual (Chart.js) ---
+    (function cargarTendencia() {
+        const cargando = document.getElementById('tendencia-cargando');
+        const errorEl = document.getElementById('tendencia-error');
+        const wrap = document.getElementById('tendencia-wrap');
+
+        function fallar() {
+            cargando.style.display = 'none';
+            wrap.style.display = 'none';
+            errorEl.style.display = 'block';
+        }
+
+        fetch("{{ url_for('dashboard.tendencia') }}?anio={{ year }}")
+            .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+            .then(data => {
+                if (typeof Chart === 'undefined') { fallar(); return; }
+                cargando.style.display = 'none';
+                wrap.style.display = 'block';
+
+                const oscuro = document.documentElement.getAttribute('data-bs-theme') === 'dark';
+                Chart.defaults.color = oscuro ? '#94A3B8' : '#475569';
+                Chart.defaults.borderColor = oscuro ? '#1E293B' : '#E2E8F0';
+
+                new Chart(document.getElementById('tendenciaChart'), {
+                    type: 'line',
+                    data: {
+                        labels: data.etiquetas,
+                        datasets: [
+                            {
+                                label: 'Entregas',
+                                data: data.entregas,
+                                borderColor: '#1E40AF',
+                                backgroundColor: 'rgba(30, 64, 175, 0.12)',
+                                fill: true,
+                                tension: 0.3,
+                                pointRadius: 3
+                            },
+                            {
+                                label: 'Devoluciones',
+                                data: data.devoluciones,
+                                borderColor: '#198754',
+                                backgroundColor: 'rgba(25, 135, 84, 0.12)',
+                                fill: true,
+                                tension: 0.3,
+                                pointRadius: 3
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: { mode: 'index', intersect: false },
+                        plugins: { legend: { position: 'bottom' } },
+                        scales: {
+                            y: { beginAtZero: true, ticks: { precision: 0 } }
+                        }
+                    }
+                });
+            })
+            .catch(fallar);
+    })();
+</script>
+{% endblock %}

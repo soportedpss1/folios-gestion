@@ -1,0 +1,131 @@
+<div class="sidebar bg-dark" id="sidebar-wrapper">
+    <div class="sidebar-heading text-center py-4 px-3 mb-3 border-bottom border-secondary">
+        {% if marca.tiene_logo %}
+        <img src="{{ marca.logo_url }}" alt="{{ marca.nombre }}" class="mb-2" style="max-height:48px;">
+        {% else %}
+        <i class="fas fa-file-medical-alt text-info fa-2x mb-2"></i>
+        {% endif %}
+        <h6 class="text-white mb-0">{{ marca.nombre }}</h6>
+        {% if marca.subtitulo %}
+        <small class="text-muted">{{ marca.subtitulo }}</small>
+        {% endif %}
+    </div>
+
+    <ul class="nav flex-column px-2">
+        <li class="nav-item mb-1">
+            <a class="nav-link text-white-50 {% if request.endpoint and 'dashboard' in request.endpoint %}active{% endif %}"
+               href="{{ url_for('dashboard.index') }}">
+                <i class="fas fa-tachometer-alt me-2"></i> Dashboard
+            </a>
+        </li>
+
+        <li class="nav-item mb-1">
+            <a class="nav-link text-white-50 {% if request.endpoint and 'recepcion' in request.endpoint %}active{% endif %}"
+               href="{{ url_for('recepcion.index') }}">
+                <i class="fas fa-inbox me-2"></i> Recepción
+            </a>
+        </li>
+
+        <li class="nav-item mb-1">
+            <a class="nav-link text-white-50 {% if request.endpoint and 'folios' in request.endpoint %}active{% endif %}"
+               href="{{ url_for('folios.index') }}">
+                <i class="fas fa-file-alt me-2"></i> Folios
+            </a>
+        </li>
+
+        <li class="nav-item mb-1">
+            <a class="nav-link text-white-50 {% if request.endpoint and 'entregas' in request.endpoint %}active{% endif %}"
+               href="{{ url_for('entregas.index') }}">
+                <i class="fas fa-paper-plane me-2"></i> Entregas
+            </a>
+        </li>
+
+        <li class="nav-item mb-1">
+            <a class="nav-link text-white-50 {% if request.endpoint and 'devoluciones' in request.endpoint %}active{% endif %}"
+               href="{{ url_for('devoluciones.index') }}">
+                <i class="fas fa-undo me-2"></i> Devoluciones
+            </a>
+        </li>
+
+        <li class="nav-item mb-1">
+            <a class="nav-link text-white-50 {% if request.endpoint and 'reportes' in request.endpoint %}active{% endif %}"
+               href="{{ url_for('reportes.index') }}">
+                <i class="fas fa-chart-bar me-2"></i> Reportes
+            </a>
+        </li>
+
+        <hr class="border-secondary my-2">
+
+        {% if puede('usuarios.gestionar') %}
+        <li class="nav-item mb-1">
+            <a class="nav-link text-white-50 {% if request.endpoint and 'usuarios' in request.endpoint %}active{% endif %}"
+               href="{{ url_for('usuarios.index') }}">
+                <i class="fas fa-users-cog me-2"></i> Usuarios
+            </a>
+        </li>
+        {% endif %}
+
+        {% if current_user.is_admin() %}
+        <li class="nav-item mb-1">
+            <a class="nav-link text-white-50 {% if request.endpoint and 'permisos' in request.endpoint %}active{% endif %}"
+               href="{{ url_for('permisos.index') }}">
+                <i class="fas fa-user-shield me-2"></i> Permisos
+            </a>
+        </li>
+        <li class="nav-item mb-1">
+            <a class="nav-link text-white-50 {% if request.endpoint and 'marca' in request.endpoint %}active{% endif %}"
+               href="{{ url_for('marca.index') }}">
+                <i class="fas fa-palette me-2"></i> Marca
+            </a>
+        </li>
+        <li class="nav-item mb-1">
+            <a class="nav-link text-white-50 {% if request.endpoint and 'backup' in request.endpoint %}active{% endif %}"
+               href="{{ url_for('backup.index') }}">
+                <i class="fas fa-archive me-2"></i> Copias
+            </a>
+        </li>
+        {% endif %}
+
+        {% if current_user.is_admin() or current_user.is_operador() or puede('centros.gestionar') %}
+        <li class="nav-item mb-1">
+            <a class="nav-link text-white-50 {% if request.endpoint and 'centros' in request.endpoint %}active{% endif %}"
+               href="{{ url_for('centros.index') }}">
+                <i class="fas fa-hospital me-2"></i> Centros
+            </a>
+        </li>
+        {% endif %}
+
+        {% if puede('certificados.gestionar') %}
+        <li class="nav-item mb-1">
+            <a class="nav-link text-white-50 {% if request.endpoint and 'certificados' in request.endpoint %}active{% endif %}"
+               href="{{ url_for('certificados.index') }}">
+                <i class="fas fa-certificate me-2"></i> Certificados
+            </a>
+        </li>
+        {% endif %}
+
+        {% if puede('auditoria.ver') %}
+        <li class="nav-item mb-1">
+            <a class="nav-link text-white-50 {% if request.endpoint and 'auditoria' in request.endpoint %}active{% endif %}"
+               href="{{ url_for('auditoria.index') }}">
+                <i class="fas fa-history me-2"></i> Auditoría
+            </a>
+        </li>
+        {% endif %}
+
+        {% if puede('sincronizacion.usar') %}
+        <li class="nav-item mb-1">
+            <a class="nav-link text-white-50 {% if request.endpoint and 'sincronizacion' in request.endpoint %}active{% endif %}"
+               href="{{ url_for('sincronizacion.index') }}">
+                <i class="fas fa-cloud-arrow-up me-2"></i> Sincronización
+            </a>
+        </li>
+        {% endif %}
+    </ul>
+
+    <div class="sidebar-footer">
+        <small>
+            <i class="fas fa-code me-1"></i> v1.0.0
+        </small>
+    </div>
+</div>

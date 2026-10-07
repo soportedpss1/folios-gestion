@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+
+{% block title %}Nuevo Usuario{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold mb-0">
+        <i class="fas fa-user-plus me-2 text-primary"></i>Nuevo Usuario
+    </h4>
+    <a href="{{ url_for('usuarios.index') }}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-1"></i>Volver
+    </a>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-4">
+                <form method="POST" data-loading>
+                    {{ form.hidden_tag() }}
+
+                    <div class="row g-3">
+                        <div class="col-md-12">
+                            <label class="form-label fw-semibold">{{ form.name.label.text }}</label>
+                            {{ form.name(class="form-control", placeholder="Nombre completo") }}
+                            {% for error in form.name.errors %}
+                                <div class="text-danger small mt-1" role="alert">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">{{ form.username.label.text }}</label>
+                            {{ form.username(class="form-control", placeholder="Nombre de usuario") }}
+                            {% for error in form.username.errors %}
+                                <div class="text-danger small mt-1" role="alert">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">{{ form.email.label.text }}</label>
+                            {{ form.email(class="form-control", placeholder="correo@ejemplo.com") }}
+                            {% for error in form.email.errors %}
+                                <div class="text-danger small mt-1" role="alert">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">{{ form.password.label.text }}</label>
+                            {{ form.password(class="form-control", placeholder="Mínimo 6 caracteres") }}
+                            {% for error in form.password.errors %}
+                                <div class="text-danger small mt-1" role="alert">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">{{ form.confirm_password.label.text }}</label>
+                            {{ form.confirm_password(class="form-control", placeholder="Repita la contraseña") }}
+                            {% for error in form.confirm_password.errors %}
+                                <div class="text-danger small mt-1" role="alert">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="col-md-12">
+                            <label class="form-label fw-semibold">{{ form.rol.label.text }}</label>
+                            {{ form.rol(class="form-select") }}
+                            {% for error in form.rol.errors %}
+                                <div class="text-danger small mt-1" role="alert">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <div class="d-flex justify-content-end gap-2">
+                        <a href="{{ url_for('usuarios.index') }}" class="btn btn-outline-secondary">Cancelar</a>
+                        {{ form.submit(class="btn btn-primary") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
