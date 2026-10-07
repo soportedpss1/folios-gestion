@@ -36,6 +36,7 @@ http://localhost:8081
 | `TRUST_PROXY` | `false` | `true` solo detrás de un reverse proxy que fije `X-Forwarded-For`. Permite que los rate limits distingan IP reales. |
 | `RATELIMIT_DEFAULT` | `300 per hour` | Tope global de peticiones. `/health` va exento. |
 | `TZ` | UTC (contenedor) | Hora local para las fechas de auditoría y detalle de folio (se guardan en UTC). |
+| `SCANS_FOLDER` | `<raíz del proyecto>/scans` | Carpeta de los JPG de folios escaneados: `<SCANS_FOLDER>/<año>/<número>.jpg`. En Docker montada como `./scans:/app/scans` — ver el gotcha de ownership en [Escaneos](#escaneos). |
 
 ### Rotar credenciales de MariaDB
 
@@ -211,6 +212,52 @@ curl -fsX POST -H "X-Sync-Token: $SHEET_SYNC_TOKEN" \
 | Permisos | `/permisos` | Permisos granulares por usuario (admin) |
 | Marca | `/marca` | Nombre, subtítulo, logo y favicon (admin) |
 | Copias | `/backup` | Descarga y restauración de respaldos JSON (admin) |
+| Escaneos | `/escaneos/subir` | Subir JPG de folios escaneados y marcarlos (permiso `escaneos.subir`) |
+
+## Escaneos
+
+Admin/operador → **Escaneos** (`/escaneos/subir`), permiso `escaneos.subir`
+(rol `edit` o `admin`).
+
+- **Convención de nombre:** cada archivo debe llamarse `<número>.jpg` o
+  `<número>.jpeg` (1–10 dígitos, mayúspulas/minúsculas indiferentes). El
+  destino en disco se reconstruye desde el número parseado, así que el nombre
+  que llega del navegador nunca toca el filesystem.
+- **Subcarpeta por año:** el selector de año del form manda; los archivos se
+  guardan en `<SCANS_FOLDER>/<año>/`. El año se aplica a todo el lote, sin
+  importar la fecha del archivo.
+- **Sobrescritura:** subir de nuevo el mismo número sobrescribe el JPG
+  existente (gana el último del lote) y el folio sigue marcado.
+- **Lote tolerante a errores:** un nombre inválido (`.png`, espacios, ruta,
+  más de 10 dígitos…) no aborta el request — se reporta por archivo como
+  "Nombre inválido", no se escribe nada para él y el resto del lote se
+  procesa normalmente. No hay validación `FileAllowed` en el form: el único
+  gate es la regex de `app/services/escaneos.py`.
+- **Marcado:** al guardar, los folios con ese `(año, número)` quedan en
+  `escaneado=True` (auditable); si no existe el folio el JPG se guarda igual
+  y se reporta "Sin coincidencia".
+
+### Volumen Docker: crear `scans/` antes del primer arranque
+
+`docker-compose.yml` monta `./scans:/app/scans`. Si la carpeta **no existe**
+en el host, Docker la crea como **root**, pero la app corre como `appuser`
+(UID 1000) y toda subida fallaría con "Error al guardar" (permiso denegado).
+Crée la carpeta con el ownership correcto **antes** de `docker compose up -d`:
+
+```bash
+mkdir -p scans
+chown 1000:1000 scans   # UID/GID de appuser (Dockerfile)
+```
+
+Si la carpeta ya existe como root (la creó Docker por nosotros):
+
+```bash
+sudo chown -R 1000:1000 scans
+```
+
+`SCANS_FOLDER` (env var, default `<raíz>/scans`) cambia la ruta solo a nivel
+de aplicación; en Docker el punto de montaje sigue siendo `./scans` — ajuste
+también `docker-compose.yml` si la renombra.
 
 ## Copias de respaldo
 

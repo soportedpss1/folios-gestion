@@ -65,6 +65,7 @@ app/
   entregas/        # /entregas — assign folios to health centers
   devoluciones/    # /devoluciones — record returns
   reportes/        # /reportes — PDF/Excel export
+  escaneos/        # /escaneos — subida de folios escaneados JPG
   usuarios/        # /usuarios — user CRUD
   centros/         # /centros — health center CRUD + list PDF/Excel export + xlsx import
    certificados/    # /certificados — certificate type CRUD
@@ -116,4 +117,5 @@ app/
 - KPIs: `app/services/kpis.py::conteos_folios` es la única fuente de dashboard y reportes; `entregado`/`devuelto` excluyen nulos.
 - Timestamps: columnas `created_at`/`createAt`/`fecha` se guardan en UTC naive; se renderizan con el filtro `|localtime` (honra `TZ`, compose pone `America/Havana`). Los campos `fechaEntrega`/`fechaDevolucion` son `Date` de negocio y van en hora local.
 - `RecepcionForm` limita el rango a `MAX_FOLIOS_POR_RECEPCION` (10000) folios; el chequeo de solape se repite dentro del `try` de `recepcion/create`, bajo el `FOR UPDATE` de `_next_rango_id`, porque la validación del form corre antes del lock.
+- Escaneos: JPG en `SCANS_FOLDER` (env, default `<raíz>/scans`), montado en Docker como `./scans:/app/scans`. **Ownership**: si `scans/` no existe en el host, Docker la crea como root y `appuser` (UID 1000) no puede escribir → toda subida falla con "Error al guardar"; crear antes del primer arranque (`mkdir -p scans && chown 1000:1000 scans`). El único gate de nombre es `NOMBRE_RE` en `app/services/escaneos.py` (`^(\d{1,10})\.(jpg|jpeg)$`): `EscaneoForm.archivos` **no** lleva `FileAllowed` a propósito — un no-JPG no debe abortar el lote; los inválidos se reportan por archivo y no se escriben.
 - Tests PDF (`test_pdf_escape`, `test_exports_contenido::…pdf`) requieren pango/cairo: corren en Docker, no en un venv bare.

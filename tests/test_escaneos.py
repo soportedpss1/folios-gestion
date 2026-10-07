@@ -88,6 +88,19 @@ def test_servicio_nombres_invalidos_no_escriben(app, scans_dir):
     assert not scans_dir.exists(), 'ningún inválido debe crear la carpeta'
 
 
+def test_servicio_nombre_con_demasiados_digitos_no_crashea(app, scans_dir):
+    # >4300 dígitos: int() lanzaría ValueError (límite CPython) y abortaría el
+    # lote. Con el gate de 1-10 dígitos el nombre queda inválido y el resto sigue.
+    nombre_largo = '9' * 5000 + '.jpg'
+    with app.test_request_context():
+        reporte = guardar_y_matchear(
+            [jpg(nombre_largo), jpg('1000.jpg')], 2026, 1)
+    assert reporte['invalidos'] == 1
+    assert reporte['resultados'][0]['estado'] == 'nombre_invalido'
+    assert (scans_dir / '2026' / '1000.jpg').exists(), \
+        'el válido del mismo lote debe procesarse igual'
+
+
 def test_servicio_mayusculas_y_jpeg_aceptados(app, tipo, scans_dir):
     folio = make_folio(tipo, anio=2026, numero=1001)
     db.session.commit()
@@ -204,3 +217,20 @@ def test_subir_lote_mixto(auth_client, folio, scans_dir):
     assert not (scans_dir / '2026' / 'nada.jpg').exists()
     assert 'Nombre inválido' in text
     assert 'Sin coincidencia' in text
+
+
+def test_subir_lote_mixto_con_png(auth_client, folio, scans_dir):
+    # Un .png en el lote no debe rechazar el request completo: el JPG válido
+    # se guarda y el folio se marca; el .png se reporta como nombre inválido
+    # sin escribir nada en disco.
+    resp = post_subir(auth_client, 2026, [
+        ('escaneo.png', b'PNGDATA'),  # extensión no permitida → inválido
+        ('1000.jpg', b'OK'),          # match → marcado
+    ])
+    assert resp.status_code == 200
+    text = resp.get_data(as_text=True)
+    assert folio.escaneado is True, 'un no-JPG no aborta el lote'
+    assert (scans_dir / '2026' / '1000.jpg').read_bytes() == b'OK'
+    assert not (scans_dir / '2026' / 'escaneo.png').exists()
+    assert not (scans_dir / '2026' / 'escaneo.jpg').exists()
+    assert 'Nombre inválido' in text

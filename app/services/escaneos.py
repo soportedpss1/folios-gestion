@@ -13,10 +13,12 @@ from app.extensions import db
 from app.models.folio import Folio
 from app.services.audit import log_audit
 
-# Nombre estricto: solo dígitos + .jpg/.jpeg. El destino en disco se reconstruye
+# Nombre estricto: 1-10 dígitos + .jpg/.jpeg. El destino en disco se reconstruye
 # desde el número parseado, así que el filename del cliente nunca toca el
-# filesystem (no hay path traversal posible).
-NOMBRE_RE = re.compile(r'^(\d+)\.(jpg|jpeg)$', re.IGNORECASE)
+# filesystem (no hay path traversal posible). El tope de 10 dígitos es el de
+# Folio.folio (Integer) y garantiza que int() nunca lance: una captura más larga
+# (>4300 dígitos) haría crashear el lote por el límite int↔str de CPython.
+NOMBRE_RE = re.compile(r'^(\d{1,10})\.(jpg|jpeg)$', re.IGNORECASE)
 
 MARCADO = 'marcado'
 SIN_COINCIDENCIA = 'sin_coincidencia'

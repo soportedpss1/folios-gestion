@@ -17,3 +17,5 @@ foliosDB.md
 .dockerignore
 Dockerfile
 docker-compose.yml
+scans/
+secrets/
