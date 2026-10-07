@@ -53,6 +53,11 @@ class Config:
     # 32 MB: el respaldo JSON de backup/restaurar puede superar los 5 MB viejos.
     MAX_CONTENT_LENGTH = int(os.environ.get('MAX_CONTENT_LENGTH', 32 * 1024 * 1024))
 
+    # Carpeta de folios escaneados: <SCANS_FOLDER>/<anio>/<numero>.jpg.
+    # Se monta como volumen en docker-compose (sobrevive reinicios del contenedor).
+    _PROYECTO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    SCANS_FOLDER = os.environ.get('SCANS_FOLDER') or os.path.join(_PROYECTO, 'scans')
+
     # Almacenamiento de rate limits. Default memoria (dev local); en Docker/Gunicorn
     # compose inyecta redis:// para que los 4 workers compartan el contador.
     RATELIMIT_STORAGE_URI = os.environ.get('RATELIMIT_STORAGE_URI', 'memory://')

@@ -28,6 +28,7 @@ PERMISOS = {
     'entregas.gestionar': ('Crear/editar entregas', 'edit'),
     'devoluciones.gestionar': ('Crear/editar devoluciones', 'edit'),
     'folios.actualizar': ('Actualizar estado de folios', 'edit'),
+    'escaneos.subir': ('Subir escaneos', 'edit'),
 }
 
 

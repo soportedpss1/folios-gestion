@@ -17,6 +17,8 @@ services:
     volumes:
       # JSON de la cuenta de servicio (sync manual desde la UI; carpeta ignorada por git)
       - ./secrets:/app/secrets
+      # Folios escaneados JPG: <SCANS_FOLDER>/<anio>/<numero>.jpg
+      - ./scans:/app/scans
     depends_on:
       db:
         condition: service_healthy

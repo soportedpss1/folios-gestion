@@ -17,3 +17,4 @@ Thumbs.db
 backups/
 .pytest_cache/
 backup_pre_*.sql
+scans/
