@@ -46,6 +46,12 @@ mano o se descargan desde donde almacene el release):
 
 ```bash
 mkdir -p /opt/folios && cd /opt/folios
+# desde GitHub (repo público: https://github.com/soportedpss1/folios-gestion)
+curl -fsSLO https://raw.githubusercontent.com/soportedpss1/folios-gestion/main/docker-compose.deploy.yml
+curl -fsSLO https://raw.githubusercontent.com/soportedpss1/folios-gestion/main/.env.example
+curl -fsSL -o despliegue.md https://raw.githubusercontent.com/soportedpss1/folios-gestion/main/docs/despliegue.md
+
+# alternativa: copiar los archivos desde otra máquina
 scp usuario@origen:/ruta/proyecto/{docker-compose.deploy.yml,.env.example} .
 ```
 

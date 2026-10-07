@@ -29,8 +29,10 @@ del repo, que construye desde el código):
 
 ```bash
 mkdir -p /opt/folios && cd /opt/folios
-# copiar docker-compose.deploy.yml y .env.example desde el repo (scp)
-cp .env.example .env && chmod 600 .env      # editar SECRET_KEY y claves DB
+curl -fsSLO https://raw.githubusercontent.com/soportedpss1/folios-gestion/main/docker-compose.deploy.yml
+curl -fsSLO https://raw.githubusercontent.com/soportedpss1/folios-gestion/main/.env.example
+
+cp .env.example .env && chmod 600 .env   # editar SECRET_KEY y claves DB
 mkdir -p scans secrets && sudo chown -R 1000:1000 scans secrets
 
 docker compose -f docker-compose.deploy.yml pull

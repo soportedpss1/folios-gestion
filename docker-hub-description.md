@@ -16,11 +16,13 @@ y reportes. Interfaz en español, Flask + MariaDB.
 
 ```bash
 mkdir -p /opt/folios && cd /opt/folios
-# Copiar desde el proyecto (o descargarlo de donde aloje el release):
 #   docker-compose.deploy.yml   compose que usa esta imagen (no compila)
 #   .env.example                plantilla de variables
 #   docs/despliegue.md          guía completa
-scp usuario@origen:/ruta/proyecto/{docker-compose.deploy.yml,.env.example} .
+# Código y docs: https://github.com/soportedpss1/folios-gestion
+curl -fsSLO https://raw.githubusercontent.com/soportedpss1/folios-gestion/main/docker-compose.deploy.yml
+curl -fsSLO https://raw.githubusercontent.com/soportedpss1/folios-gestion/main/.env.example
+curl -fsSL -o despliegue.md https://raw.githubusercontent.com/soportedpss1/folios-gestion/main/docs/despliegue.md
 
 cp .env.example .env && chmod 600 .env
 # editar .env: SECRET_KEY, DB_PASSWORD, DB_ROOT_PASSWORD
