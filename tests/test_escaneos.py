@@ -125,3 +125,82 @@ def test_servicio_audita_solo_cambio(app, tipo, scans_dir):
         segunda = AuditLog.query.filter_by(tabla='folios', registro_id=folio.id).count()
     assert primera == 1, 'el primer marcado debe auditar'
     assert segunda == 1, 're-subir no debe duplicar el log'
+
+
+def post_subir(client, anio, archivos):
+    """archivos: lista de (nombre, contenido_bytes)."""
+    data = {
+        'anio': anio,
+        'archivos': [(BytesIO(contenido), nombre) for nombre, contenido in archivos],
+    }
+    return client.post('/escaneos/subir', data=data,
+                       content_type='multipart/form-data')
+
+
+def test_subir_requiere_login(client):
+    assert client.get('/escaneos/subir').status_code == 302
+
+
+def test_subir_sin_permiso_redirige(client):
+    from tests.conftest import make_user
+    make_user('lector', 'lectura')
+    client.post('/auth/login', data={'username': 'lector', 'password': 'pass12345'})
+    resp = client.get('/escaneos/subir', follow_redirects=True)
+    assert resp.status_code == 200
+    assert 'No tiene permisos' in resp.get_data(as_text=True)
+
+
+def test_subir_muestra_form(auth_client):
+    resp = auth_client.get('/escaneos/subir')
+    assert resp.status_code == 200
+    text = resp.get_data(as_text=True)
+    assert 'Subir Escaneos' in text
+    assert 'multiple' in text  # input multi-archivo
+
+
+def test_subir_marca_folio(auth_client, folio, scans_dir):
+    resp = post_subir(auth_client, folio.anioCert, [('1000.jpg', b'IMG')])
+    assert resp.status_code == 200
+    text = resp.get_data(as_text=True)
+    assert 'Marcado' in text
+    assert folio.escaneado is True
+    assert (scans_dir / '2026' / '1000.jpg').exists()
+
+
+def test_subir_sin_anio_no_escribe(auth_client, folio, scans_dir):
+    resp = post_subir(auth_client, '', [('1000.jpg', b'IMG')])
+    assert 'Seleccione un año' in resp.get_data(as_text=True)
+    assert folio.escaneado is False
+    assert not scans_dir.exists()
+
+
+def test_subir_anio_inexistente_no_escribe(auth_client, folio, scans_dir):
+    resp = post_subir(auth_client, 1999, [('1000.jpg', b'IMG')])
+    assert 'Not a valid choice' in resp.get_data(as_text=True)
+    assert folio.escaneado is False
+    assert not scans_dir.exists()
+
+
+def test_subir_archivo_repetido_en_lote(auth_client, folio, scans_dir):
+    # Dos archivos con el mismo número en un mismo request: gana el último
+    # (sobrescritura) y el folio queda marcado igual.
+    resp = post_subir(auth_client, 2026,
+                      [('1000.jpg', b'UNO'), ('1000.jpg', b'DOS')])
+    assert resp.status_code == 200
+    assert folio.escaneado is True
+    assert (scans_dir / '2026' / '1000.jpg').read_bytes() == b'DOS'
+
+
+def test_subir_lote_mixto(auth_client, folio, scans_dir):
+    resp = post_subir(auth_client, 2026, [
+        ('1000.jpg', b'OK'),      # match → marcado
+        ('nada.jpg', b'X'),       # nombre inválido → no se escribe
+        ('9999.jpg', b'Y'),       # sin folio → guardado, sin coincidencia
+    ])
+    assert resp.status_code == 200
+    text = resp.get_data(as_text=True)
+    assert folio.escaneado is True, 'un inválido no aborta el lote'
+    assert (scans_dir / '2026' / '9999.jpg').exists()
+    assert not (scans_dir / '2026' / 'nada.jpg').exists()
+    assert 'Nombre inválido' in text
+    assert 'Sin coincidencia' in text

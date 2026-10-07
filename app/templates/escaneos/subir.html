@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+
+{% block title %}Subir Escaneos{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold mb-0">
+        <i class="fas fa-camera me-2 text-primary"></i>Subir Escaneos
+    </h4>
+    <a href="{{ url_for('dashboard.index') }}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-1"></i>Volver
+    </a>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-body p-4">
+                <p class="text-muted mb-3">
+                    Suba los JPG de los folios escaneados. Cada archivo debe
+                    llamarse <code>numero.jpg</code> (ej.
+                    <code>1000.jpg</code>) y se guardará en la carpeta del año
+                    elegido. Si el número coincide con folios de ese año, todos
+                    quedan marcados como escaneados. Los archivos repetidos se
+                    sobrescriben.
+                </p>
+
+                {% if not anios %}
+                <div class="alert alert-warning">
+                    No hay folios registrados todavía: no hay años para elegir.
+                </div>
+                {% endif %}
+
+                <form method="POST" enctype="multipart/form-data">
+                    {{ form.hidden_tag() }}
+                    <div class="row g-3 align-items-end">
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">{{ form.anio.label.text }}</label>
+                            {{ form.anio(class="form-select") }}
+                            {% for error in form.anio.errors %}
+                                <div class="text-danger small mt-1" role="alert">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <div class="col-md-5">
+                            <label class="form-label fw-semibold">{{ form.archivos.label.text }}</label>
+                            {{ form.archivos(class="form-control", multiple=True) }}
+                            {% for error in form.archivos.errors %}
+                                <div class="text-danger small mt-1" role="alert">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <div class="col-md-3">
+                            {{ form.submit(class="btn btn-primary w-100",
+                                           disabled=(not anios)) }}
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        {% if reporte %}
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-body p-4">
+                <div class="alert alert-info">
+                    <i class="fas fa-list-check me-1"></i>
+                    <strong>{{ reporte.marcados }}</strong> archivo(s) con folio
+                    marcado,
+                    <strong>{{ reporte.sin_coincidencia }}</strong> sin
+                    coincidencia,
+                    <strong>{{ reporte.invalidos }}</strong> nombre inválido,
+                    <strong>{{ reporte.errores }}</strong> error al guardar.
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Archivo</th>
+                                <th>Folio</th>
+                                <th>Folios marcados</th>
+                                <th>Resultado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for r in reporte.resultados %}
+                            <tr>
+                                <td>{{ r.nombre }}</td>
+                                <td>{{ r.numero if r.numero is not none else '—' }}</td>
+                                <td>{{ r.folios if r.folios else '—' }}</td>
+                                <td>
+                                    <span class="badge
+                                        {% if r.estado == 'marcado' %}bg-success
+                                        {% elif r.estado == 'sin_coincidencia' %}bg-warning text-dark
+                                        {% else %}bg-danger{% endif %}">
+                                        {{ {'marcado': 'Marcado',
+                                            'sin_coincidencia': 'Sin coincidencia',
+                                            'nombre_invalido': 'Nombre inválido',
+                                            'error_guardar': 'Error al guardar'}[r.estado] }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -56,6 +56,15 @@
 
         <hr class="border-secondary my-2">
 
+        {% if puede('escaneos.subir') %}
+        <li class="nav-item mb-1">
+            <a class="nav-link text-white-50 {% if request.endpoint and 'escaneos' in request.endpoint %}active{% endif %}"
+               href="{{ url_for('escaneos.subir') }}">
+                <i class="fas fa-camera me-2"></i> Escaneos
+            </a>
+        </li>
+        {% endif %}
+
         {% if puede('usuarios.gestionar') %}
         <li class="nav-item mb-1">
             <a class="nav-link text-white-50 {% if request.endpoint and 'usuarios' in request.endpoint %}active{% endif %}"

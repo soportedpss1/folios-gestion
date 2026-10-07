@@ -151,6 +151,7 @@ def create_app(config_class=None):
     from app.permisos import permisos_bp
     from app.marca import marca_bp
     from app.backup import backup_bp
+    from app.escaneos import escaneos_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
@@ -167,6 +168,7 @@ def create_app(config_class=None):
     app.register_blueprint(permisos_bp)
     app.register_blueprint(marca_bp)
     app.register_blueprint(backup_bp)
+    app.register_blueprint(escaneos_bp)
 
     from app.main import main_bp
     app.register_blueprint(main_bp)
