@@ -16,7 +16,9 @@ def test_admin_tiene_todos_los_permisos(admin):
 
 
 def test_operador_default_solo_edicion(operador):
-    assert puede('recepcion.crear', operador)
+    assert not puede('recepcion.crear', operador)
+    assert not puede('recepcion.ver', operador)
+    assert not puede('escaneos.subir', operador)
     assert puede('folios.actualizar', operador)
     assert not puede('usuarios.gestionar', operador)
     assert not puede('centros.importar', operador)
@@ -188,3 +190,61 @@ def test_sidebar_permisos_visible_admin(admin_client):
 
 def test_sidebar_permisos_oculto_operador(auth_client):
     assert '/permisos' not in auth_client.get('/dashboard/').get_data(as_text=True)
+
+
+# --- recepción y escaneos: solo admin (o grant) ---
+
+
+def test_recepcion_y_escaneos_default_admin(app, admin):
+    operador = make_user('ope_restr', 'operador')
+    lectura = make_user('lec_restr', 'lectura')
+    for clave in ('recepcion.ver', 'recepcion.crear', 'escaneos.subir'):
+        assert puede(clave, admin), f'admin sin {clave}'
+        assert not puede(clave, operador), f'operador no debe tener {clave}'
+        assert not puede(clave, lectura), f'lectura no debe tener {clave}'
+
+
+def test_grant_recepcion_ver_habilita_index(client, app):
+    lectura = make_user('lector_ver', 'lectura')
+    db.session.add(PermisoUsuario(user_id=lectura.id, permiso='recepcion.ver'))
+    db.session.commit()
+    client.post('/auth/login',
+                data={'username': lectura.username, 'password': 'pass12345'})
+
+    assert client.get('/recepcion/').status_code == 200, \
+        'el grant de recepcion.ver debió abrir el índice'
+
+
+def test_grant_escaneos_subir_habilita_subida(client, app):
+    lectura = make_user('lector_scans', 'lectura')
+    db.session.add(PermisoUsuario(user_id=lectura.id, permiso='escaneos.subir'))
+    db.session.commit()
+    client.post('/auth/login',
+                data={'username': lectura.username, 'password': 'pass12345'})
+
+    assert client.get('/escaneos/subir').status_code == 200, \
+        'el grant de escaneos.subir debió abrir la subida'
+
+
+def test_recepcion_index_bloqueado_para_operador(auth_client):
+    resp = auth_client.get('/recepcion/', follow_redirects=True)
+    assert resp.status_code == 200
+    assert 'No tiene permisos' in resp.get_data(as_text=True)
+    assert '/dashboard' in resp.request.path
+
+
+def test_recepcion_exports_bloqueados_para_operador(auth_client):
+    assert auth_client.get('/recepcion/export/excel').status_code == 302
+    assert auth_client.get('/recepcion/export/pdf').status_code == 302
+
+
+def test_sidebar_recepcion_visible_para_admin(admin_client):
+    assert '/recepcion' in admin_client.get('/dashboard/').get_data(as_text=True)
+
+
+def test_sidebar_recepcion_oculto_para_operador(auth_client):
+    assert '/recepcion' not in auth_client.get('/dashboard/').get_data(as_text=True)
+
+
+def test_sidebar_escaneos_oculto_para_operador(auth_client):
+    assert '/escaneos' not in auth_client.get('/dashboard/').get_data(as_text=True)

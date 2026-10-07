@@ -199,7 +199,7 @@ curl -fsX POST -H "X-Sync-Token: $SHEET_SYNC_TOKEN" \
 | Módulo | Ruta | Descripción |
 |--------|------|-------------|
 | Dashboard | `/dashboard` | KPIs y gráficas |
-| Recepción | `/recepcion` | Registrar rangos de folios |
+| Recepción | `/recepcion` | Registrar rangos de folios (admin o grant `recepcion.ver`) |
 | Folios | `/folios` | Listar y gestionar folios |
 | Entregas | `/entregas` | Asignar folios a centros |
 | Devoluciones | `/devoluciones` | Registrar devoluciones |
@@ -216,8 +216,10 @@ curl -fsX POST -H "X-Sync-Token: $SHEET_SYNC_TOKEN" \
 
 ## Escaneos
 
-Admin/operador → **Escaneos** (`/escaneos/subir`), permiso `escaneos.subir`
-(rol `edit` o `admin`).
+Admin → **Escaneos** (`/escaneos/subir`), permiso `escaneos.subir` (default
+`admin`). Un operador o usuario de lectura solo entra si el admin le concede
+`escaneos.subir` desde Permisos; el mismo grant habilita el botón **Validar
+Escaneados** de Folios.
 
 - **Convención de nombre:** cada archivo debe llamarse `<número>.jpg` o
   `<número>.jpeg` (1–10 dígitos, mayúspulas/minúsculas indiferentes). El

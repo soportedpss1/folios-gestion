@@ -89,7 +89,7 @@ def test_devoluciones_index_paginado(auth_client, app, tipo, centro, operador, f
     assert len(visibles) == 25, f'page1 muestra {len(visibles)} de 30'
 
 
-def test_recepcion_index_paginado(auth_client, app, tipo, operador):
+def test_recepcion_index_paginado(admin_client, app, tipo, operador):
     for i in range(30):
         base = 5001 + i
         db.session.add(RecepcionFolio(
@@ -97,7 +97,7 @@ def test_recepcion_index_paginado(auth_client, app, tipo, operador):
             folioInicial=base, folioFinal=base, rangoId=base, userId=operador.id))
     db.session.commit()
 
-    text = auth_client.get('/recepcion/').get_data(as_text=True)
+    text = admin_client.get('/recepcion/').get_data(as_text=True)
     marcadores = [f'{5001 + i} - {5001 + i}' for i in range(30)]
     visibles = _marcadores_visibles(text, marcadores)
     assert 'page=2' in text, 'sin paginación en recepción'

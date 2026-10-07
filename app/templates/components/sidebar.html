@@ -19,12 +19,14 @@
             </a>
         </li>
 
+        {% if puede('recepcion.ver') %}
         <li class="nav-item mb-1">
             <a class="nav-link text-white-50 {% if request.endpoint and 'recepcion' in request.endpoint %}active{% endif %}"
                href="{{ url_for('recepcion.index') }}">
                 <i class="fas fa-inbox me-2"></i> Recepción
             </a>
         </li>
+        {% endif %}
 
         <li class="nav-item mb-1">
             <a class="nav-link text-white-50 {% if request.endpoint and 'folios' in request.endpoint %}active{% endif %}"

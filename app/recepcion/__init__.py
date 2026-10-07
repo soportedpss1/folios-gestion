@@ -102,6 +102,7 @@ def registrar_rango(*, fecha, anioCert, tipoCert_id, folioInicial, folioFinal,
 
 @recepcion_bp.route('/')
 @login_required
+@permiso_requerido('recepcion.ver')
 def index():
     page = request.args.get('page', 1, type=int)
     pagination = RecepcionFolio.query.options(
@@ -120,6 +121,7 @@ def _recepciones_para_exportar():
 
 @recepcion_bp.route('/export/excel')
 @login_required
+@permiso_requerido('recepcion.ver')
 def export_excel():
     from openpyxl import Workbook
     from openpyxl.styles import Font, Alignment, PatternFill
@@ -168,6 +170,7 @@ def export_excel():
 
 @recepcion_bp.route('/export/pdf')
 @login_required
+@permiso_requerido('recepcion.ver')
 def export_pdf():
     from weasyprint import HTML
 

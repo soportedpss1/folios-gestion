@@ -15,8 +15,8 @@ Y = 2026
 # ---------------------------------------------------------------- recepción
 
 
-def test_recepcion_rechaza_rango_demasiado_grande(auth_client, app, tipo, operador):
-    resp = auth_client.post('/recepcion/create', data={
+def test_recepcion_rechaza_rango_demasiado_grande(admin_client, app, tipo, operador):
+    resp = admin_client.post('/recepcion/create', data={
         'fecha': '2026-01-01', 'anioCert': Y, 'tipoCert': tipo.id,
         'folioInicial': 1, 'folioFinal': 10000000,
     }, follow_redirects=True)
@@ -26,8 +26,8 @@ def test_recepcion_rechaza_rango_demasiado_grande(auth_client, app, tipo, operad
     assert Folio.query.count() == 0, 'se insertaron folios a pesar del rechazo'
 
 
-def test_recepcion_acepta_rango_normal(auth_client, app, tipo, operador):
-    resp = auth_client.post('/recepcion/create', data={
+def test_recepcion_acepta_rango_normal(admin_client, app, tipo, operador):
+    resp = admin_client.post('/recepcion/create', data={
         'fecha': '2026-01-01', 'anioCert': Y, 'tipoCert': tipo.id,
         'folioInicial': 1, 'folioFinal': 5,
     }, follow_redirects=True)

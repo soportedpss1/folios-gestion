@@ -87,9 +87,9 @@ def test_usuario_lectura_no_puede_editar(app, client):
     assert 'No tiene permisos' in resp.get_data(as_text=True)
 
 
-def test_auditoria_registra_insert_de_recepcion(auth_client, app, tipo):
+def test_auditoria_registra_insert_de_recepcion(admin_client, app, tipo):
     from app.models.audit_log import AuditLog
-    resp = auth_client.post(
+    resp = admin_client.post(
         '/recepcion/create',
         data={'fecha': '2026-09-28', 'anioCert': 2026, 'tipoCert': tipo.id,
               'folioInicial': 9001, 'folioFinal': 9003},

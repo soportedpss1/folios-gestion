@@ -55,7 +55,7 @@ def test_centros_excel_no_escribe_formulas(auth_client, app, tipo, centro, opera
     assert not formulas, f'celdas escritas como fórmula: {formulas}'
 
 
-def test_recepcion_excel_no_escribe_formulas(auth_client, app, tipo, operador):
+def test_recepcion_excel_no_escribe_formulas(admin_client, app, tipo, operador):
     tipo.name = '=1+1'
     operador.username = '=HYPERLINK("http://evil","click")'
     db.session.add(RecepcionFolio(fecha=date(Y, 4, 1), anioCert=Y,
@@ -63,7 +63,7 @@ def test_recepcion_excel_no_escribe_formulas(auth_client, app, tipo, operador):
                                   folioFinal=410, rangoId=1, userId=operador.id))
     db.session.commit()
 
-    resp = auth_client.get('/recepcion/export/excel')
+    resp = admin_client.get('/recepcion/export/excel')
     assert resp.status_code == 200
 
     wb = load_workbook(BytesIO(resp.data))

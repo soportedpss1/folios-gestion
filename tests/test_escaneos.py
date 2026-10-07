@@ -14,15 +14,15 @@ from app.services.permisos import PERMISOS, puede
 from tests.conftest import make_folio, make_user
 
 
-def test_permiso_escaneos_existe_y_es_edit():
+def test_permiso_escaneos_existe_y_es_admin():
     assert 'escaneos.subir' in PERMISOS
-    assert PERMISOS['escaneos.subir'] == ('Subir escaneos', 'edit')
+    assert PERMISOS['escaneos.subir'] == ('Subir escaneos', 'admin')
 
 
 def test_permiso_escaneos_por_rol(app):
     operador = make_user('operador', 'operador')
     lectura = make_user('lector', 'lectura')
-    assert puede('escaneos.subir', operador) is True
+    assert puede('escaneos.subir', operador) is False
     assert puede('escaneos.subir', lectura) is False
 
 
@@ -245,9 +245,9 @@ def test_validar_endpoint_sin_permiso_redirige(client):
     assert 'No tiene permisos' in resp.get_data(as_text=True)
 
 
-def test_validar_endpoint_marca_y_flash(auth_client, folio, scans_dir):
+def test_validar_endpoint_marca_y_flash(admin_client, folio, scans_dir):
     escribir(scans_dir, 2026, '1000.jpg')
-    resp = auth_client.post('/folios/validar-escaneados',
+    resp = admin_client.post('/folios/validar-escaneados',
                             follow_redirects=True)
     assert resp.status_code == 200
     assert folio.escaneado is True
@@ -256,10 +256,10 @@ def test_validar_endpoint_marca_y_flash(auth_client, folio, scans_dir):
     assert '1 folio marcado' in text
 
 
-def test_validar_endpoint_sin_carpeta_flash_error(auth_client, folio, scans_dir):
+def test_validar_endpoint_sin_carpeta_flash_error(admin_client, folio, scans_dir):
     folio.escaneado = True
     db.session.commit()
-    resp = auth_client.post('/folios/validar-escaneados',
+    resp = admin_client.post('/folios/validar-escaneados',
                             follow_redirects=True)
     assert resp.status_code == 200
     assert 'No existe la carpeta de escaneados' in resp.get_data(as_text=True)
@@ -270,9 +270,15 @@ def test_validar_endpoint_sin_carpeta_flash_error(auth_client, folio, scans_dir)
 # activo y Flask lo reusa en cada request ⇒ `g._login_user` (caché de
 # Flask-Login) se comparte entre clients del mismo test: un segundo login
 # vería al usuario anterior. Con un solo client por test, `g` nace limpio.
-def test_boton_visible_para_operador(auth_client):
-    text = auth_client.get('/folios/').get_data(as_text=True)
+def test_boton_visible_para_admin(admin_client):
+    text = admin_client.get('/folios/').get_data(as_text=True)
     assert 'Validar Escaneados' in text
+
+
+def test_boton_oculto_para_operador(auth_client):
+    text = auth_client.get('/folios/').get_data(as_text=True)
+    assert 'Validar Escaneados' not in text, \
+        'operador no debe ver el botón (ya no tiene escaneos.subir)'
 
 
 def test_boton_oculto_para_lectura(client):
@@ -307,16 +313,16 @@ def test_subir_sin_permiso_redirige(client):
     assert 'No tiene permisos' in resp.get_data(as_text=True)
 
 
-def test_subir_muestra_form(auth_client):
-    resp = auth_client.get('/escaneos/subir')
+def test_subir_muestra_form(admin_client):
+    resp = admin_client.get('/escaneos/subir')
     assert resp.status_code == 200
     text = resp.get_data(as_text=True)
     assert 'Subir Escaneos' in text
     assert 'multiple' in text  # input multi-archivo
 
 
-def test_subir_marca_folio(auth_client, folio, scans_dir):
-    resp = post_subir(auth_client, folio.anioCert, [('1000.jpg', b'IMG')])
+def test_subir_marca_folio(admin_client, folio, scans_dir):
+    resp = post_subir(admin_client, folio.anioCert, [('1000.jpg', b'IMG')])
     assert resp.status_code == 200
     text = resp.get_data(as_text=True)
     assert 'Marcado' in text
@@ -324,32 +330,32 @@ def test_subir_marca_folio(auth_client, folio, scans_dir):
     assert (scans_dir / '2026' / '1000.jpg').exists()
 
 
-def test_subir_sin_anio_no_escribe(auth_client, folio, scans_dir):
-    resp = post_subir(auth_client, '', [('1000.jpg', b'IMG')])
+def test_subir_sin_anio_no_escribe(admin_client, folio, scans_dir):
+    resp = post_subir(admin_client, '', [('1000.jpg', b'IMG')])
     assert 'Seleccione un año' in resp.get_data(as_text=True)
     assert folio.escaneado is False
     assert not scans_dir.exists()
 
 
-def test_subir_anio_inexistente_no_escribe(auth_client, folio, scans_dir):
-    resp = post_subir(auth_client, 1999, [('1000.jpg', b'IMG')])
+def test_subir_anio_inexistente_no_escribe(admin_client, folio, scans_dir):
+    resp = post_subir(admin_client, 1999, [('1000.jpg', b'IMG')])
     assert 'Not a valid choice' in resp.get_data(as_text=True)
     assert folio.escaneado is False
     assert not scans_dir.exists()
 
 
-def test_subir_archivo_repetido_en_lote(auth_client, folio, scans_dir):
+def test_subir_archivo_repetido_en_lote(admin_client, folio, scans_dir):
     # Dos archivos con el mismo número en un mismo request: gana el último
     # (sobrescritura) y el folio queda marcado igual.
-    resp = post_subir(auth_client, 2026,
+    resp = post_subir(admin_client, 2026,
                       [('1000.jpg', b'UNO'), ('1000.jpg', b'DOS')])
     assert resp.status_code == 200
     assert folio.escaneado is True
     assert (scans_dir / '2026' / '1000.jpg').read_bytes() == b'DOS'
 
 
-def test_subir_lote_mixto(auth_client, folio, scans_dir):
-    resp = post_subir(auth_client, 2026, [
+def test_subir_lote_mixto(admin_client, folio, scans_dir):
+    resp = post_subir(admin_client, 2026, [
         ('1000.jpg', b'OK'),      # match → marcado
         ('nada.jpg', b'X'),       # nombre inválido → no se escribe
         ('9999.jpg', b'Y'),       # sin folio → guardado, sin coincidencia
@@ -363,11 +369,11 @@ def test_subir_lote_mixto(auth_client, folio, scans_dir):
     assert 'Sin coincidencia' in text
 
 
-def test_subir_lote_mixto_con_png(auth_client, folio, scans_dir):
+def test_subir_lote_mixto_con_png(admin_client, folio, scans_dir):
     # Un .png en el lote no debe rechazar el request completo: el JPG válido
     # se guarda y el folio se marca; el .png se reporta como nombre inválido
     # sin escribir nada en disco.
-    resp = post_subir(auth_client, 2026, [
+    resp = post_subir(admin_client, 2026, [
         ('escaneo.png', b'PNGDATA'),  # extensión no permitida → inválido
         ('1000.jpg', b'OK'),          # match → marcado
     ])

@@ -17,6 +17,7 @@ PERMISOS = {
     'usuarios.gestionar': ('Gestionar usuarios', 'admin'),
     'centros.gestionar': ('Crear/editar/desactivar centros', 'admin'),
     'centros.importar': ('Importar centros desde Excel', 'admin'),
+    'recepcion.ver': ('Ver recepción y exports', 'admin'),
     'recepcion.importar': ('Importar rangos de recepción', 'admin'),
     'entregas.importar': ('Importar entregas', 'admin'),
     'devoluciones.importar': ('Importar devoluciones', 'admin'),
@@ -24,11 +25,11 @@ PERMISOS = {
     'certificados.gestionar': ('Gestionar tipos de certificado', 'admin'),
     'auditoria.ver': ('Ver auditoría', 'admin'),
     'sincronizacion.usar': ('Usar sincronización con Google Sheets', 'admin'),
-    'recepcion.crear': ('Crear recepciones', 'edit'),
+    'recepcion.crear': ('Crear recepciones', 'admin'),
     'entregas.gestionar': ('Crear/editar entregas', 'edit'),
     'devoluciones.gestionar': ('Crear/editar devoluciones', 'edit'),
     'folios.actualizar': ('Actualizar estado de folios', 'edit'),
-    'escaneos.subir': ('Subir escaneos', 'edit'),
+    'escaneos.subir': ('Subir escaneos', 'admin'),
 }
 
 

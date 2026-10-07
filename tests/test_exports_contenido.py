@@ -93,17 +93,17 @@ def test_reportes_pdf_contiene_filas(auth_client, app, tipo, centro, operador, m
     assert centro.name in html
 
 
-def test_recepcion_index_muestra_botones_export(auth_client):
-    resp = auth_client.get('/recepcion/')
+def test_recepcion_index_muestra_botones_export(admin_client):
+    resp = admin_client.get('/recepcion/')
     assert resp.status_code == 200
     assert b'/recepcion/export/excel' in resp.data, 'botón Excel ausente'
     assert b'/recepcion/export/pdf' in resp.data, 'botón PDF ausente'
 
 
-def test_recepcion_excel_contiene_filas(auth_client, app, tipo, operador):
+def test_recepcion_excel_contiene_filas(admin_client, app, tipo, operador):
     r = _seed_recepcion(tipo, operador)
 
-    resp = auth_client.get('/recepcion/export/excel')
+    resp = admin_client.get('/recepcion/export/excel')
     assert resp.status_code == 200
     assert 'recepciones.xlsx' in resp.headers['Content-Disposition']
 
@@ -122,7 +122,7 @@ def test_recepcion_excel_contiene_filas(auth_client, app, tipo, operador):
     assert rows[1][7] == operador.username
 
 
-def test_recepcion_pdf_contiene_filas(auth_client, app, tipo, operador, monkeypatch):
+def test_recepcion_pdf_contiene_filas(admin_client, app, tipo, operador, monkeypatch):
     try:
         import weasyprint
     except OSError as exc:
@@ -141,7 +141,7 @@ def test_recepcion_pdf_contiene_filas(auth_client, app, tipo, operador, monkeypa
     _FakeHTML.captured = []
     monkeypatch.setattr(weasyprint, 'HTML', _FakeHTML)
 
-    resp = auth_client.get('/recepcion/export/pdf')
+    resp = admin_client.get('/recepcion/export/pdf')
     assert resp.status_code == 200
     assert len(_FakeHTML.captured) == 1
     html = _FakeHTML.captured[0]
@@ -151,7 +151,7 @@ def test_recepcion_pdf_contiene_filas(auth_client, app, tipo, operador, monkeypa
     assert operador.username in html
 
 
-def test_recepcion_pdf_escapa_html(auth_client, app, tipo, operador, monkeypatch):
+def test_recepcion_pdf_escapa_html(admin_client, app, tipo, operador, monkeypatch):
     try:
         import weasyprint
     except OSError as exc:
@@ -172,7 +172,7 @@ def test_recepcion_pdf_escapa_html(auth_client, app, tipo, operador, monkeypatch
     _FakeHTML.captured = []
     monkeypatch.setattr(weasyprint, 'HTML', _FakeHTML)
 
-    resp = auth_client.get('/recepcion/export/pdf')
+    resp = admin_client.get('/recepcion/export/pdf')
     assert resp.status_code == 200
     html = _FakeHTML.captured[0]
     assert '<script>' not in html, 'HTML sin escapar en PDF'
