@@ -3,9 +3,11 @@
 {% block title %}Importar Folios{% endblock %}
 
 {% block content %}
+{% set modo = modo|default('digitado') %}
+{% set confirm_url = url_for('folios.importar_nulos_confirmar') if modo == 'nulo' else url_for('folios.importar_confirmar') %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h4 class="fw-bold mb-0">
-        <i class="fas fa-file-import me-2 text-primary"></i>Importar Folios
+        <i class="fas fa-file-import me-2 text-primary"></i>{{ 'Validar Nulos' if modo == 'nulo' else 'Importar Folios' }}
     </h4>
     <div class="d-flex gap-2">
         <a href="{{ url_for('folios.plantilla') }}" class="btn btn-outline-success">
@@ -25,7 +27,7 @@
                     El archivo debe tener exactamente esta columna en la fila 1:
                     <code>folio</code>. Una fila por número de folio (máx. 5000
                     filas). Cada número que coincida con la base de datos marca
-                    sus folios como <strong>digitado</strong>. Un mismo número
+                    sus folios como <strong>{{ 'nulo' if modo == 'nulo' else 'digitado' }}</strong>. Un mismo número
                     puede repetirse entre años/tipos: se marcan todas las
                     coincidencias.
                 </p>
@@ -65,7 +67,7 @@
                                 <th style="width:60px">#</th>
                                 <th>Folio</th>
                                 <th>Coincidencias</th>
-                                <th>Ya digitado</th>
+                                <th>{{ 'Ya nulo' if modo == 'nulo' else 'Ya digitado' }}</th>
                                 <th>A marcar</th>
                                 <th>Estado</th>
                             </tr>
@@ -76,13 +78,13 @@
                                 <td>{{ p.n }}</td>
                                 <td>{{ p.folio }}</td>
                                 <td>{{ p.encontrados if p.encontrados is not none else '—' }}</td>
-                                <td>{{ p.ya_digitado if p.encontrados is not none else '—' }}</td>
+                                <td>{{ p.ya_marcado if p.encontrados is not none else '—' }}</td>
                                 <td>{{ p.a_actualizar if p.encontrados is not none else '—' }}</td>
                                 <td>
                                     {% if p.error %}
                                         <span class="badge bg-danger">{{ p.error }}</span>
                                     {% elif p.a_actualizar == 0 %}
-                                        <span class="badge bg-secondary">Ya digitado</span>
+                                        <span class="badge bg-secondary">{{ 'Ya nulo' if modo == 'nulo' else 'Ya digitado' }}</span>
                                     {% else %}
                                         <span class="badge bg-success">A marcar</span>
                                     {% endif %}
@@ -94,7 +96,7 @@
                 </div>
 
                 {% if total_validas %}
-                <form method="POST" action="{{ url_for('folios.importar_confirmar') }}">
+                <form method="POST" action="{{ confirm_url }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="payload" value="{{ payload_json }}">
                     <div class="d-flex justify-content-end gap-2">

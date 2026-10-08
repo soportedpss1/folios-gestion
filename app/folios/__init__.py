@@ -230,8 +230,8 @@ def update_status():
     })
 
 
-def _preview_digitado(filas):
-    """Filas del Excel → (preview, payload).
+def _preview_flag(filas, attr):
+    """Filas del Excel → (preview, payload) para la bandera booleana `attr`.
 
     Un número de folio no es único (se repite entre año/tipo): cada número
     matchea todos los folios DB con ese número. El preview muestra cuántas
@@ -245,18 +245,18 @@ def _preview_digitado(filas):
         numero = import_excel.a_entero(fila.get('folio'))
         if numero is None or numero <= 0:
             preview.append({'n': i, 'folio': fila.get('folio'), 'encontrados': 0,
-                            'ya_digitado': 0, 'a_actualizar': 0,
+                            'ya_marcado': 0, 'a_actualizar': 0,
                             'error': 'Número inválido'})
             continue
         if numero in vistos:
             preview.append({'n': i, 'folio': numero, 'encontrados': 0,
-                            'ya_digitado': 0, 'a_actualizar': 0,
+                            'ya_marcado': 0, 'a_actualizar': 0,
                             'error': 'Repetido en el archivo'})
             continue
         vistos.add(numero)
         numeros.append(numero)
         preview.append({'n': i, 'folio': numero, 'encontrados': None,
-                        'ya_digitado': 0, 'a_actualizar': 0, 'error': None})
+                        'ya_marcado': 0, 'a_actualizar': 0, 'error': None})
 
     encontrados = {}
     if numeros:
@@ -269,13 +269,18 @@ def _preview_digitado(filas):
             continue
         filas_folio = encontrados.get(item['folio'], [])
         item['encontrados'] = len(filas_folio)
-        item['ya_digitado'] = sum(1 for f in filas_folio if f.digitado)
-        item['a_actualizar'] = len(filas_folio) - item['ya_digitado']
+        item['ya_marcado'] = sum(1 for f in filas_folio if getattr(f, attr))
+        item['a_actualizar'] = len(filas_folio) - item['ya_marcado']
         if not filas_folio:
             item['error'] = 'No existe'
             continue
         payload.append(item['folio'])
     return preview, payload
+
+
+def _preview_digitado(filas):
+    """Filas del Excel → (preview, payload) para marcar digitado."""
+    return _preview_flag(filas, 'digitado')
 
 
 def _parsear_payload(payload_raw):
@@ -357,5 +362,65 @@ def importar_confirmar():
               f'{plural(actualizados, "marcado")} como digitado.', 'success')
     else:
         flash('Ningún folio nuevo por marcar: todos ya estaban digitados.',
+              'warning')
+    return redirect(url_for('folios.index'))
+
+
+@folios_bp.route('/importar-nulos', methods=['GET', 'POST'])
+@login_required
+@permiso_requerido('folios.importar')
+def importar_nulos():
+    """Mismo flujo que importar(), pero marca la bandera `nulo`."""
+    form = ImportarFolioForm()
+    if form.validate_on_submit():
+        try:
+            filas = import_excel.leer_filas(
+                form.archivo.data, HEADERS_FOLIO,
+                import_excel.MAX_FOLIOS_POR_ARCHIVO)
+        except import_excel.ImportExcelError as e:
+            flash(str(e), 'danger')
+            return render_template('folios/importar.html', form=form,
+                                   modo='nulo')
+
+        preview, payload = _preview_flag(filas, 'nulo')
+        total_validos = sum(1 for p in preview if p['error'] is None)
+        if not total_validos:
+            flash('Ningún folio del archivo coincide con la base de datos.',
+                  'danger')
+        return render_template(
+            'folios/importar.html', form=form, preview=preview,
+            payload_json=json.dumps(payload), total_validas=total_validos,
+            max_mostrar=MAX_PREVIA_MOSTRAR, modo='nulo',
+        )
+    return render_template('folios/importar.html', form=form, modo='nulo')
+
+
+@folios_bp.route('/importar-nulos/confirmar', methods=['POST'])
+@login_required
+@permiso_requerido('folios.importar')
+def importar_nulos_confirmar():
+    numeros = _parsear_payload(request.form.get('payload'))
+    if numeros is None:
+        flash('Datos de importación inválidos. Repita la operación.', 'danger')
+        return redirect(url_for('folios.importar_nulos'))
+
+    # Revalida contra la DB: el hidden es editable y los folios pudieron
+    # cambiar desde la vista previa.
+    actualizados = 0
+    for folio in Folio.query.filter(Folio.folio.in_(numeros)).all():
+        if folio.nulo:
+            continue
+        old = {'nulo': folio.nulo}
+        folio.nulo = True
+        log_audit(current_user.id, 'UPDATE', 'folios', folio.id, old,
+                  {'nulo': True})
+        actualizados += 1
+
+    db.session.commit()
+    if actualizados:
+        flash(f'{actualizados} {plural(actualizados, "folio")} '
+              f'{plural(actualizados, "marcado")} como nulo.', 'success')
+    else:
+        flash('Ningún folio nuevo por marcar: todos ya estaban nulos.',
               'warning')
     return redirect(url_for('folios.index'))
