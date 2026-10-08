@@ -32,11 +32,32 @@
                                     <option value="{{ t.id }}"{% if t.id == tipo_actual %} selected{% endif %}>{{ t.name }}</option>
                                 {% endfor %}
                             </select>
-                            {{ form.folio_ids(class="form-select", size="10", id="folio-select") }}
-                            <small class="text-muted" id="folio-hint">Seleccione un tipo de certificado para ver los folios</small>
-                            {% for error in form.folio_ids.errors %}
-                                <div class="text-danger small mt-1" role="alert">{{ error }}</div>
-                            {% endfor %}
+                            <div class="row g-3">
+                                <div class="col-md-8">
+                                    {{ form.folio_ids(class="form-select", size="10", id="folio-select") }}
+                                    <small class="text-muted" id="folio-hint">Seleccione un tipo de certificado para ver los folios</small>
+                                    {% for error in form.folio_ids.errors %}
+                                        <div class="text-danger small mt-1" role="alert">{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="border rounded p-3 bg-body-tertiary h-100" id="folio-resumen"
+                                         aria-live="polite">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <span class="text-muted small">Folio inicial</span>
+                                            <span class="fw-semibold" id="resumen-inicial">—</span>
+                                        </div>
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <span class="text-muted small">Folio final</span>
+                                            <span class="fw-semibold" id="resumen-final">—</span>
+                                        </div>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <span class="text-muted small">Cantidad</span>
+                                            <span class="badge bg-primary" id="resumen-cantidad">0</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <div class="col-md-6">
@@ -81,9 +102,26 @@
     const HINT_TIPO = 'Seleccione un tipo de certificado para ver los folios';
     const HINT_OK = 'Seleccione con Ctrl (o Cmd en Mac) para marcar varios';
 
+    function updateResumen() {
+        const opciones = Array.from(select.selectedOptions);
+        const numeros = opciones
+            .map(o => (o.text.match(/^Folio\s+(\d+)/) || [])[1])
+            .filter(Boolean)
+            .map(Number);
+        const inicial = numeros.length ? Math.min(...numeros) : null;
+        const final = numeros.length ? Math.max(...numeros) : null;
+        // 1 solo seleccionado: min == max → inicial y final muestran lo mismo.
+        document.getElementById('resumen-inicial').textContent =
+            inicial !== null ? inicial : '—';
+        document.getElementById('resumen-final').textContent =
+            final !== null ? final : '—';
+        document.getElementById('resumen-cantidad').textContent = opciones.length;
+    }
+
     function updateCounter() {
         const n = select.selectedOptions.length;
         counter.textContent = n === 1 ? '1 seleccionado' : n + ' seleccionados';
+        updateResumen();
     }
 
     select.addEventListener('change', updateCounter);
@@ -137,5 +175,8 @@
     } else {
         hint.textContent = HINT_TIPO;
     }
+
+    // Estado inicial del contador y del resumen (POST revalidado con selección)
+    updateCounter();
 </script>
 {% endblock %}

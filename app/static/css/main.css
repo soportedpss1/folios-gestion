@@ -445,6 +445,24 @@ body {
 .sticky-top {
     z-index: 1020;
 }
+
+/* ---------- Resumen de selección de folios (crear entrega/devolución) ---------- */
+#folio-resumen {
+    font-size: 1.05rem;
+}
+
+#folio-resumen .text-muted {
+    font-weight: 500;
+}
+
+#folio-resumen #resumen-inicial,
+#folio-resumen #resumen-final,
+#folio-resumen #resumen-cantidad {
+    font-size: 1.25rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
 /* ---------- Comentarios de folio ---------- */
 .comentario-texto {
     white-space: pre-wrap;

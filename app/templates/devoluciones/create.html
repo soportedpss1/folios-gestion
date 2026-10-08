@@ -43,14 +43,35 @@
                                 {{ form.folio_ids.label.text }}
                                 <span class="badge bg-info ms-2" id="selected-count">0 seleccionados</span>
                             </label>
-                            {{ form.folio_ids(class="form-select", size="10", id="folio-select") }}
-                            <small class="text-muted" id="folio-hint">Seleccione un tipo de certificado</small>
-                            <div id="folio-vacio" class="text-muted mt-1" style="display:none;">
-                                <i class="fas fa-info-circle me-1"></i>No hay folios pendientes de devolución para este centro
+                            <div class="row g-3">
+                                <div class="col-md-8">
+                                    {{ form.folio_ids(class="form-select", size="10", id="folio-select") }}
+                                    <small class="text-muted" id="folio-hint">Seleccione un tipo de certificado</small>
+                                    <div id="folio-vacio" class="text-muted mt-1" style="display:none;">
+                                        <i class="fas fa-info-circle me-1"></i>No hay folios pendientes de devolución para este centro
+                                    </div>
+                                    {% for error in form.folio_ids.errors %}
+                                        <div class="text-danger small mt-1" role="alert">{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="border rounded p-3 bg-body-tertiary h-100" id="folio-resumen"
+                                         aria-live="polite">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <span class="text-muted small">Folio inicial</span>
+                                            <span class="fw-semibold" id="resumen-inicial">—</span>
+                                        </div>
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <span class="text-muted small">Folio final</span>
+                                            <span class="fw-semibold" id="resumen-final">—</span>
+                                        </div>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <span class="text-muted small">Cantidad</span>
+                                            <span class="badge bg-primary" id="resumen-cantidad">0</span>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            {% for error in form.folio_ids.errors %}
-                                <div class="text-danger small mt-1" role="alert">{{ error }}</div>
-                            {% endfor %}
                         </div>
 
                         <div class="col-md-12">
@@ -84,9 +105,26 @@
     const folioHint = document.getElementById('folio-hint');
     const folioVacio = document.getElementById('folio-vacio');
 
+    function updateResumen() {
+        const opciones = Array.from(folioSelect.selectedOptions);
+        const numeros = opciones
+            .map(o => (o.text.match(/^Folio\s+(\d+)/) || [])[1])
+            .filter(Boolean)
+            .map(Number);
+        const inicial = numeros.length ? Math.min(...numeros) : null;
+        const final = numeros.length ? Math.max(...numeros) : null;
+        // 1 solo seleccionado: min == max → inicial y final muestran lo mismo.
+        document.getElementById('resumen-inicial').textContent =
+            inicial !== null ? inicial : '—';
+        document.getElementById('resumen-final').textContent =
+            final !== null ? final : '—';
+        document.getElementById('resumen-cantidad').textContent = opciones.length;
+    }
+
     function updateCounter() {
         const n = folioSelect.selectedOptions.length;
         counter.textContent = n === 1 ? '1 seleccionado' : n + ' seleccionados';
+        updateResumen();
     }
 
     folioSelect.addEventListener('change', updateCounter);
