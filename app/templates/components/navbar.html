@@ -20,15 +20,16 @@
                   title="Próxima sincronización automática">
                 <i class="fas fa-sync-alt me-1" aria-hidden="true"></i><span id="sync-timer-text">…</span>
             </span>
-            <span class="text-white me-2 small">
+            <span class="text-white me-2 small text-truncate" style="max-width: 140px;">
                 <i class="fas fa-user-circle me-1" aria-hidden="true"></i>
                 {{ current_user.username }}
                 <span class="badge bg-light text-primary ms-1 d-none d-sm-inline">{{ current_user.rol|capitalize }}</span>
             </span>
             <form method="post" action="{{ url_for('auth.logout') }}" class="d-inline">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button type="submit" class="btn btn-outline-light btn-sm">
-                    <i class="fas fa-sign-out-alt"></i> Salir
+                <button type="submit" class="btn btn-outline-light btn-sm"
+                        aria-label="Cerrar sesión">
+                    <i class="fas fa-sign-out-alt" aria-hidden="true"></i><span class="d-none d-sm-inline"> Salir</span>
                 </button>
             </form>
         </div>

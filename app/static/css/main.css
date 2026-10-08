@@ -51,7 +51,13 @@ body {
 /* ---------- Sidebar ---------- */
 .sidebar {
     width: var(--sidebar-width);
-    min-height: 100vh;
+    /* Alto fijo, NO min-height: con min-height el sidebar crece hasta el alto
+       de su contenido y overflow-y: auto nunca dispara scroll → los items
+       del fondo quedan cortados fuera del viewport. dvh descuenta la barra
+       de navegación en celulares. */
+    height: 100vh;
+    height: 100dvh;
+    max-height: 100dvh;
     position: fixed;
     top: 0;
     left: 0;
@@ -60,6 +66,7 @@ body {
     flex-direction: column;
     transition: transform var(--transition-speed) ease;
     overflow-y: auto;
+    overscroll-behavior: contain; /* el scroll del menú no "fuga" al contenido */
     background-color: var(--sidebar-bg) !important; /* pisa la utilidad bg-dark */
 }
 
@@ -418,7 +425,10 @@ body {
 }
 
 /* ---------- Responsive ---------- */
-@media (max-width: 768px) {
+/* El drawer del sidebar opera en 992 para alinearse con navbar-expand-lg de
+   Bootstrap (lg): <992 (celular/tablet portrait) off-canvas + backdrop;
+   >=992 (escritorio) sidebar fijo con margin-left. */
+@media (max-width: 991px) {
     .sidebar {
         transform: translateX(calc(-1 * var(--sidebar-width)));
     }
@@ -430,9 +440,14 @@ body {
     #page-content-wrapper {
         margin-left: 0;
     }
+
+    /* Targets táctiles: nav-links del drawer a ~44px de alto */
+    .sidebar .nav-link {
+        padding: 0.75rem 1rem;
+    }
 }
 
-@media (min-width: 769px) {
+@media (min-width: 992px) {
     .sidebar {
         transform: translateX(0);
     }

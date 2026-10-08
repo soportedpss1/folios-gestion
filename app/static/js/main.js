@@ -216,7 +216,8 @@ document.addEventListener('DOMContentLoaded', function() {
         backdrop.addEventListener('click', () => alternarSidebar(false));
         document.body.appendChild(backdrop);
 
-        const esMovil = () => window.innerWidth <= 768;
+        // Drawer (<992px, igual que navbar-expand-lg) vs sidebar fijo de escritorio.
+        const esMovil = () => window.innerWidth < 992;
 
         function alternarSidebar(abrir) {
             if (esMovil()) {
