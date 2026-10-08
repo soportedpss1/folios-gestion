@@ -44,7 +44,7 @@
                             <a href="{{ url_for('certificados.edit', id=c.id) }}" class="btn btn-sm btn-outline-warning" title="Editar" aria-label="Editar tipo {{ c.name }}">
                                 <i class="fas fa-edit" aria-hidden="true"></i>
                             </a>
-                            <form method="POST" action="{{ url_for('certificados.delete', id=c.id) }}" class="d-inline" onsubmit="return confirm('¿Desactivar este tipo de certificado?')">
+                            <form method="POST" action="{{ url_for('certificados.delete', id=c.id) }}" class="d-inline" data-confirm data-title="¿Desactivar este tipo de certificado?">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <button type="submit" class="btn btn-sm btn-outline-danger" title="Desactivar" aria-label="Desactivar tipo {{ c.name }}">
                                     <i class="fas fa-ban" aria-hidden="true"></i>

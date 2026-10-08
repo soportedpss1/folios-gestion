@@ -8,7 +8,7 @@
         <i class="fas fa-cloud-arrow-up me-2 text-primary"></i>Sincronización con Google Sheets
     </h4>
     <form method="POST" action="{{ url_for('sincronizacion.sincronizar_ahora') }}"
-          class="d-inline" onsubmit="return confirm('¿Sincronizar ahora con Google Sheets?')">
+          class="d-inline" data-confirm data-title="¿Sincronizar ahora con Google Sheets?">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button type="submit" class="btn btn-primary" {% if not config_ok %}disabled{% endif %}>
             <i class="fas fa-rotate me-1"></i>Sincronizar ahora

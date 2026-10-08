@@ -328,8 +328,79 @@ body {
     overflow: hidden;
 }
 
+/* ---------- Diálogos SweetAlert2 (tema de la app) ---------- */
 .swal2-popup {
     border-radius: 1rem !important;
+    font-family: var(--font-sans);
+}
+
+.swal2-title {
+    color: var(--text);
+}
+
+.swal2-html-container {
+    color: var(--text);
+    font-family: var(--font-sans);
+}
+
+.swal2-close {
+    color: var(--text-muted-tone);
+}
+
+.swal2-close:hover {
+    color: var(--text);
+}
+
+.swal2-confirm {
+    background-color: var(--primary) !important;
+    border-color: var(--primary) !important;
+    border-radius: 0.5rem !important;
+    font-weight: 500;
+    box-shadow: none !important;
+}
+
+.swal2-confirm:not([disabled]):hover {
+    background-color: var(--primary-dark) !important;
+    border-color: var(--primary-dark) !important;
+}
+
+/* Confirmación destructiva (customClass de confirmar.js) */
+.swal2-confirm.swal-confirm-danger {
+    background-color: var(--danger) !important;
+    border-color: var(--danger) !important;
+}
+
+.swal2-confirm.swal-confirm-danger:not([disabled]):hover {
+    background-color: #bb2d3b !important;
+    border-color: #bb2d3b !important;
+}
+
+.swal2-cancel {
+    background-color: transparent !important;
+    border: 1px solid var(--bs-border-color) !important;
+    border-radius: 0.5rem !important;
+    color: var(--text) !important;
+    font-weight: 500;
+    box-shadow: none !important;
+}
+
+.swal2-cancel:not([disabled]):hover {
+    background-color: rgba(148, 163, 184, 0.2) !important;
+    color: var(--text) !important;
+}
+
+/* Tema oscuro: surface y texto como el resto de la app (#16223A / slate-200) */
+[data-bs-theme="dark"] .swal2-popup {
+    background-color: #16223A;
+}
+
+[data-bs-theme="dark"] .swal2-title,
+[data-bs-theme="dark"] .swal2-html-container {
+    color: #E2E8F0;
+}
+
+[data-bs-theme="dark"] .swal2-cancel {
+    border-color: #1E293B !important;
 }
 
 /* Skeleton de carga (tablas/gráficos) */

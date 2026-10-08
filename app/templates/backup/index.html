@@ -125,7 +125,9 @@
         </div>
 
         <form method="POST" action="{{ url_for('backup.restaurar') }}"
-              onsubmit="return confirm('¿Restaurar el respaldo? Se reemplazarán TODOS los datos de la base. Esta acción no se puede deshacer.')">
+              data-confirm
+              data-title="¿Restaurar el respaldo? Se reemplazarán TODOS los datos de la base. Esta acción no se puede deshacer."
+              data-icon="danger">
             {{ confirm.csrf_token }}
             <input type="hidden" name="token" value="{{ token }}">
             {{ confirm.submit(class="btn btn-danger") }}
