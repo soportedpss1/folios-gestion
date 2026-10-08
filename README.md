@@ -46,7 +46,7 @@ docker compose -f docker-compose.deploy.yml exec app python init_db.py
 curl -fs http://localhost:8089/health        # {"status": "ok"}
 ```
 
-Imagen: `soportedpss1/folios-gestion:<tag>` (tags: `1.0.0`, `latest`).
+Imagen: `soportedpss1/folios-gestion:<tag>` (tags: `1.1.0`, `latest`).
 Guía completa —`.env` anotado, TLS/reverse proxy, copias, actualización y
 troubleshooting— en [`docs/despliegue.md`](docs/despliegue.md).
 
@@ -152,7 +152,28 @@ FLASK_APP=run.py flask db upgrade        # aplica 0002_integrity y posteriores
 FLASK_APP=run.py flask db check
 ```
 
-Revisions: `0001_baseline` (esquema original) → `0002_integrity` (constraints únicos) → `0003_indexes` (índices compuestos de consulta: `(anioCert, estado, nulo)`, `(tipoCert_id, anioCert)` y `audit_logs.fecha`; elimina los índices de una sola columna que quedan subsumidos) → `0004_sync_config` (tabla `sync_config`: estado y frecuencia de la sincronización a Google Sheets) → `0005_permisos_usuario` (tabla `permiso_usuarios`: permisos granulares por usuario, FK a `usuarios` con CASCADE) → `0006_marca_config` (tabla `marca_config`: nombre/subtítulo de la app + logo y favicon como BLOB).
+**Síntoma `Table '…' already exists` corriendo `0001_baseline`:** la DB existe
+pero `alembic_version` está vacía — típico de una DB inicializada con
+`init_db.py` (`create_all` no escribe alembic). El stamp es a la revisión que
+el esquema **ya tiene**: stamp a `0001_baseline` haría que `0004` falle con el
+mismo error si `sync_config` ya existe. Respalde y elija la revisión por las
+tablas presentes (`sync_config` → ≥0004, `permiso_usuarios` → ≥0005,
+`marca_config` → ≥0006, `folio_comentarios` → ≥0007):
+
+```bash
+# 1) Respaldo antes de tocar alembic_version
+docker compose exec db mariadb-dump -u"$DB_USER" -p"$DB_PASSWORD" "$DB_NAME" > backup.sql
+
+# 2) ¿Qué tablas hay y cuántas filas tiene alembic_version?
+docker compose exec db mariadb -u"$DB_USER" -p"$DB_PASSWORD" "$DB_NAME" -e 'SHOW TABLES; SELECT * FROM alembic_version;'
+
+# 3) Stamp a esa revisión (create_all con los modelos actuales → 0007) y subir
+FLASK_APP=run.py flask db stamp 0007_folio_comentarios
+FLASK_APP=run.py flask db upgrade      # aplica solo lo que falta
+FLASK_APP=run.py flask db check        # debe quedar limpio
+```
+
+Revisions: `0001_baseline` (esquema original) → `0002_integrity` (constraints únicos) → `0003_indexes` (índices compuestos de consulta: `(anioCert, estado, nulo)`, `(tipoCert_id, anioCert)` y `audit_logs.fecha`; elimina los índices de una sola columna que quedan subsumidos) → `0004_sync_config` (tabla `sync_config`: estado y frecuencia de la sincronización a Google Sheets) → `0005_permisos_usuario` (tabla `permiso_usuarios`: permisos granulares por usuario, FK a `usuarios` con CASCADE) → `0006_marca_config` (tabla `marca_config`: nombre/subtítulo de la app + logo y favicon como BLOB) → `0007_folio_comentarios` (tabla `folio_comentarios`: historial de comentarios con autor en el detalle de folio).
 
 **Antes de `0002` en una BD con datos**, compruebe que no haya duplicados (el ALTER fallará si los hay):
 
@@ -228,8 +249,8 @@ curl -fsX POST -H "X-Sync-Token: $SHEET_SYNC_TOKEN" \
 | Módulo | Ruta | Descripción |
 |--------|------|-------------|
 | Dashboard | `/dashboard` | KPIs y gráficas |
-| Recepción | `/recepcion` | Registrar rangos de folios (admin o grant `recepcion.ver`) |
-| Folios | `/folios` | Listar y gestionar folios |
+| Recepción | `/recepcion` | Registrar, editar y eliminar rangos de folios (grants `recepcion.crear`, `recepcion.ver`, `recepcion.gestionar`) |
+| Folios | `/folios` | Listar y gestionar folios; detalle con comentarios; importar digitado o marcar nulos desde Excel |
 | Entregas | `/entregas` | Asignar folios a centros |
 | Devoluciones | `/devoluciones` | Registrar devoluciones |
 | Reportes | `/reportes` | Exportar PDF/Excel |
@@ -339,5 +360,6 @@ scripts/restore_db.sh backups/db_*.sql.gz   # ⚠ reemplaza todo
 
 - **Backend:** Python 3 + Flask + SQLAlchemy
 - **Frontend:** Jinja2 + Bootstrap 5 + jQuery + SweetAlert2
+  (mensajes flash como toasts flotantes y confirmaciones con tema de la app)
 - **DB:** MariaDB 11.4
 - **DevOps:** Docker + Docker Compose (Redis para rate limits entre workers)

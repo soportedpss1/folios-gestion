@@ -5,7 +5,8 @@ de Salud: recepción de rangos, entrega/devolución a centros de salud, escaneos
 y reportes. Interfaz en español, Flask + MariaDB.
 
 - **App:** Flask 3 + SQLAlchemy + Flask-Login + Flask-WTF + Flask-Limiter
-- **UI:** Jinja2 + Bootstrap 5 + jQuery + SweetAlert2
+- **UI:** Jinja2 + Bootstrap 5 + jQuery + SweetAlert2 (mensajes como toasts
+  flotantes, confirmaciones con tema de la app, responsive)
 - **Servidor:** Gunicorn (4 workers) en el puerto `8089`
 - **Extras:** Redis (rate limits compartidos), MariaDB 11.4, worker de
   sincronización con Google Sheets (APScheduler)
@@ -48,7 +49,7 @@ El compose de despliegue usa la imagen publicada:
 ```yaml
 services:
   app:
-    image: soportedpss1/folios-gestion:1.0.0
+    image: soportedpss1/folios-gestion:1.1.0
     ports:
       - "8089:8089"
     env_file: .env
@@ -81,14 +82,15 @@ services:
 - **Copias:** respaldo JSON desde la UI (Copias) o dump SQL desde el
   contenedor `db` con `mariadb-dump` (ver `docs/despliegue.md`).
 - **Migraciones:** `FLASK_APP=run.py flask db upgrade` dentro del contenedor
-  `app`; bases pre-migraciones requieren `flask db stamp 0001_baseline` una
-  vez.
+  `app`; bases creadas con `init_db.py` (sin `alembic_version`) requieren
+  `flask db stamp <revisión>` una vez — ver README → "Síntoma Table '…'
+  already exists".
 - **Rotar credenciales MariaDB:** cambiar `.env` no cambia la contraseña ya
   inicializada en el volumen — ver README (Rotar credenciales de MariaDB).
 
 ## Tags
 
-- `soportedpss1/folios-gestion:1.0.0` — versión fija, recomendada en
+- `soportedpss1/folios-gestion:1.1.0` — versión fija, recomendada en
   producción
 - `soportedpss1/folios-gestion:latest` — última build, para pruebas
 

@@ -201,6 +201,12 @@ docker compose -f docker-compose.deploy.yml exec app python reset_password.py ad
   `flask db stamp 0001_baseline` y después `flask db upgrade`
   (ver README → Migraciones; `0002_integrity` exige resolver duplicados con
   el SQL documentado antes de subir).
+- DB inicializada con `init_db.py` (`create_all` con los modelos actuales y
+  `alembic_version` vacía) → falla con `Table '…' already exists` en
+  `0001_baseline`. Respalde y stamp a la **última** revisión que el esquema ya
+  tiene (por las tablas presentes: `marca_config` → `0006_marca_config`,
+  `folio_comentarios` → `0007_folio_comentarios`; ver
+  README → Migraciones), y después `flask db upgrade`.
 
 Comprobar el esquema:
 

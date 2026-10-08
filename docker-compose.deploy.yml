@@ -8,7 +8,7 @@
 
 services:
   app:
-    image: ${FOLIOS_IMAGE:-soportedpss1/folios-gestion:1.0.0}
+    image: ${FOLIOS_IMAGE:-soportedpss1/folios-gestion:1.1.0}
     ports:
       - "8089:8089"
     environment:
@@ -42,7 +42,7 @@ services:
 
   # Worker de sincronización automática folios -> Google Sheets (APScheduler).
   sync-worker:
-    image: ${FOLIOS_IMAGE:-soportedpss1/folios-gestion:1.0.0}
+    image: ${FOLIOS_IMAGE:-soportedpss1/folios-gestion:1.1.0}
     command: python run_worker.py
     environment:
       FLASK_CONFIG: production
