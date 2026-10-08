@@ -11,15 +11,23 @@ from app.services.mensajes import msg_solape
 MAX_FOLIOS_POR_RECEPCION = 10000
 
 
-def detectar_solape(anioCert, tipoCert_id, folioInicial, folioFinal):
-    """Devuelve el rango existente que se cruza con estos valores, o None."""
+def detectar_solape(anioCert, tipoCert_id, folioInicial, folioFinal,
+                    excluir_id=None):
+    """Devuelve el rango existente que se cruza con estos valores, o None.
+
+    `excluir_id` ignora una recepción propia: al editar, su rango actual se
+    cruza siempre consigo mismo.
+    """
     from app.models.recepcion_folio import RecepcionFolio
-    return RecepcionFolio.query.filter(
+    query = RecepcionFolio.query.filter(
         RecepcionFolio.anioCert == anioCert,
         RecepcionFolio.tipoCert_id == tipoCert_id,
         RecepcionFolio.folioInicial <= folioFinal,
         RecepcionFolio.folioFinal >= folioInicial,
-    ).first()
+    )
+    if excluir_id is not None:
+        query = query.filter(RecepcionFolio.id != excluir_id)
+    return query.first()
 
 
 class RecepcionForm(FlaskForm):
@@ -42,6 +50,9 @@ class RecepcionForm(FlaskForm):
         NumberRange(min=1, message='Ingrese un número mayor o igual a 1.'),
     ])
     submit = SubmitField('Registrar Recepción')
+    # Las ediciones lo sobrescriben por instancia: su propio rango no cuenta
+    # como solape.
+    excluir_id = None
 
     @property
     def total_folios(self):
@@ -65,7 +76,8 @@ class RecepcionForm(FlaskForm):
             return False
 
         solape = detectar_solape(self.anioCert.data, self.tipoCert.data,
-                                 self.folioInicial.data, self.folioFinal.data)
+                                 self.folioInicial.data, self.folioFinal.data,
+                                 excluir_id=self.excluir_id)
         if solape:
             self.folioInicial.errors.append(msg_solape(
                 self.folioInicial.data, self.folioFinal.data,
@@ -73,6 +85,15 @@ class RecepcionForm(FlaskForm):
             ))
             return False
         return True
+
+
+class EditarRecepcionForm(RecepcionForm):
+    """RecepcionForm + responsable. La vista carga los choices de tipoCert y
+    usuario (create no tiene usuario, por eso no vive en la clase base)."""
+    usuario = SelectField('Responsable', coerce=int, validators=[
+        DataRequired(message='Seleccione un responsable.'),
+    ])
+    submit = SubmitField('Guardar cambios')
 
 
 class ImportarRecepcionForm(FlaskForm):

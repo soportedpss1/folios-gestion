@@ -12,16 +12,20 @@ from app.extensions import db
 from app.models.recepcion_folio import RecepcionFolio
 from app.models.folio import Folio
 from app.models.tipo_certificado import TipoCertificado
+from app.models.usuario import Usuario
+from app.models.entrega_folio import EntregaFolio
+from app.models.devolucion_folio import DevolucionFolio
 from app.recepcion.forms import (
-    ImportarRecepcionForm, RecepcionForm, detectar_solape,
-    MAX_FOLIOS_POR_RECEPCION,
+    EditarRecepcionForm, ImportarRecepcionForm, RecepcionForm,
+    detectar_solape, MAX_FOLIOS_POR_RECEPCION,
 )
 from app.services import import_excel
 from app.services.audit import log_audit
 from app.services.excel import neutralizar_formulas
 from app.services.mensajes import msg_solape, INTENTE_DE_NUEVO
 from app.services.pdf import encabezado_pdf
-from app.services.queries import resolver_usuario_nombre, usuario_activo
+from app.services.queries import (get_or_404, resolver_usuario_nombre,
+                                  usuario_activo)
 from app.utils import plural
 from app.decorators import permiso_requerido
 
@@ -280,6 +284,136 @@ def create():
         return redirect(url_for('recepcion.index'))
 
     return render_template('recepcion/create.html', form=form)
+
+
+def _folios_usados(folios):
+    """Subconjunto de `folios` que no se pueden borrar ni reescribir.
+
+    Con entrega/devolución registrada, escaneado o estado != 'disponible':
+    el estado y los registros mandan, no solo la existencia de entrega.
+    """
+    ids = [f.id for f in folios]
+    if not ids:
+        return []
+    con_registro = {r.folio_id for r in
+                    EntregaFolio.query.filter(EntregaFolio.folio_id.in_(ids)).all()}
+    con_registro |= {r.folio_id for r in
+                     DevolucionFolio.query.filter(DevolucionFolio.folio_id.in_(ids)).all()}
+    return [f for f in folios
+            if f.estado != 'disponible' or f.escaneado or f.id in con_registro]
+
+
+def _mensaje_usados(accion, usados):
+    numeros = sorted(f.folio for f in usados)
+    n = len(numeros)
+    muestra = ', '.join(str(x) for x in numeros[:5]) + (' …' if n > 5 else '')
+    return (f'No se puede {accion}: {n} {plural(n, "folio")} del rango '
+            f'{plural(n, "está", "están")} en uso (entregado, devuelto o '
+            f'escaneado): {muestra}. Modifique esos folios primero.')
+
+
+@recepcion_bp.route('/<int:id>/edit', methods=['GET', 'POST'])
+@login_required
+@permiso_requerido('recepcion.gestionar', hacia='blueprint')
+def edit(id):
+    recepcion = get_or_404(RecepcionFolio, id)
+    form = EditarRecepcionForm(obj=recepcion)
+    # Su propio rango no cuenta como solape en la validación del form.
+    form.excluir_id = recepcion.id
+    form.tipoCert.choices = [(t.id, t.name) for t in
+                             TipoCertificado.query.filter_by(activo=True)
+                             .order_by(TipoCertificado.name).all()]
+    # El responsable actual entra aunque esté inactivo: si no, guardar sería
+    # imposible sin cambiarlo.
+    activos = Usuario.query.filter_by(activo=True) \
+        .order_by(Usuario.username).all()
+    usuarios_choices = [(u.id, u.username) for u in activos]
+    if recepcion.userId not in {u.id for u in activos}:
+        usuarios_choices.append((recepcion.userId, f'usuario #{recepcion.userId} (inactivo)'))
+    form.usuario.choices = usuarios_choices
+    if not form.is_submitted():
+        # obj= no llena campos sin atributo homónimo (tipoCert_id/userId).
+        form.tipoCert.data = recepcion.tipoCert_id
+        form.usuario.data = recepcion.userId
+
+    if form.validate_on_submit():
+        anio, tipo_id = form.anioCert.data, form.tipoCert.data
+        ini, fin = form.folioInicial.data, form.folioFinal.data
+        cambia_nivel = (anio != recepcion.anioCert
+                        or tipo_id != recepcion.tipoCert_id)
+
+        viejos = Folio.query.filter_by(rangoId=recepcion.rangoId).all()
+        afectados = [f for f in viejos
+                     if cambia_nivel or not (ini <= f.folio <= fin)]
+        usados = _folios_usados(afectados)
+        if usados:
+            flash(_mensaje_usados('editar', usados), 'danger')
+            return redirect(url_for('recepcion.index'))
+
+        datos_anteriores = recepcion.to_dict()
+        try:
+            conservados = set()
+            for folio in viejos:
+                if not (ini <= folio.folio <= fin):
+                    db.session.delete(folio)
+                    continue
+                conservados.add(folio.folio)
+                if cambia_nivel:
+                    folio.anioCert = anio
+                    folio.tipoCert_id = tipo_id
+            faltantes = [n for n in range(ini, fin + 1) if n not in conservados]
+            if faltantes:
+                db.session.bulk_insert_mappings(Folio, [
+                    {'rangoId': recepcion.rangoId, 'anioCert': anio,
+                     'tipoCert_id': tipo_id, 'folio': n, 'digitado': False,
+                     'escaneado': False, 'nulo': False, 'estado': 'disponible'}
+                    for n in faltantes
+                ])
+
+            recepcion.fecha = form.fecha.data
+            recepcion.anioCert = anio
+            recepcion.tipoCert_id = tipo_id
+            recepcion.folioInicial = ini
+            recepcion.folioFinal = fin
+            recepcion.userId = usuario_activo(form.usuario.data, current_user).id
+            log_audit(current_user.id, 'UPDATE', 'recepcion_folios',
+                      recepcion.id, datos_anteriores, recepcion.to_dict())
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            flash('Conflicto de integridad al actualizar la recepción. '
+                  + INTENTE_DE_NUEVO, 'danger')
+            return redirect(url_for('recepcion.index'))
+
+        flash('Recepción actualizada.', 'success')
+        return redirect(url_for('recepcion.index'))
+
+    return render_template('recepcion/edit.html', form=form, recepcion=recepcion)
+
+
+@recepcion_bp.route('/<int:id>/delete', methods=['POST'])
+@login_required
+@permiso_requerido('recepcion.gestionar', hacia='blueprint')
+def delete(id):
+    recepcion = get_or_404(RecepcionFolio, id)
+    folios = Folio.query.filter_by(rangoId=recepcion.rangoId).all()
+    usados = _folios_usados(folios)
+    if usados:
+        flash(_mensaje_usados('eliminar', usados), 'danger')
+        return redirect(url_for('recepcion.index'))
+
+    datos_anteriores = recepcion.to_dict()
+    for folio in folios:
+        db.session.delete(folio)
+    db.session.delete(recepcion)
+    log_audit(current_user.id, 'DELETE', 'recepcion_folios', recepcion.id,
+              datos_anteriores, None)
+    db.session.commit()
+
+    n = len(folios)
+    flash(f'Recepción eliminada: {n} {plural(n, "folio")} '
+          f'{plural(n, "borrado")}.', 'success')
+    return redirect(url_for('recepcion.index'))
 
 
 def _validar_filas_recepcion(filas, usuario_default):

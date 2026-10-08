@@ -43,6 +43,9 @@
                         <th>Rango</th>
                         <th>Total Folios</th>
                         <th>Registrado por</th>
+                        {% if puede('recepcion.gestionar') %}
+                        <th class="text-center">Acciones</th>
+                        {% endif %}
                     </tr>
                 </thead>
                 <tbody>
@@ -55,10 +58,26 @@
                         <td>{{ r.folioInicial }} - {{ r.folioFinal }}</td>
                         <td><span class="badge bg-primary">{{ r.folioFinal - r.folioInicial + 1 }}</span></td>
                         <td>{{ r.usuario.username }}</td>
+                        {% if puede('recepcion.gestionar') %}
+                        <td class="text-center">
+                            <a href="{{ url_for('recepcion.edit', id=r.id) }}" class="btn btn-sm btn-outline-warning" title="Editar" aria-label="Editar recepción #{{ r.id }}">
+                                <i class="fas fa-edit" aria-hidden="true"></i>
+                            </a>
+                            <form method="POST" action="{{ url_for('recepcion.delete', id=r.id) }}" class="d-inline"
+                                  data-confirm
+                                  data-title="¿Eliminar la recepción #{{ r.id }} ({{ r.folioInicial }} - {{ r.folioFinal }}) y sus {{ r.folioFinal - r.folioInicial + 1 }} folios? Esta acción no se puede deshacer."
+                                  data-icon="danger">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Eliminar" aria-label="Eliminar recepción #{{ r.id }}">
+                                    <i class="fas fa-trash" aria-hidden="true"></i>
+                                </button>
+                            </form>
+                        </td>
+                        {% endif %}
                     </tr>
                     {% else %}
                     <tr>
-                        <td class="text-center text-muted py-4" colspan="7">
+                        <td class="text-center text-muted py-4" colspan="{{ 8 if puede('recepcion.gestionar') else 7 }}">
                             <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
                             No hay recepciones registradas
                         </td>

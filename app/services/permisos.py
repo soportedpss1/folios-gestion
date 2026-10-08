@@ -26,6 +26,7 @@ PERMISOS = {
     'auditoria.ver': ('Ver auditoría', 'admin'),
     'sincronizacion.usar': ('Usar sincronización con Google Sheets', 'admin'),
     'recepcion.crear': ('Crear recepciones', 'admin'),
+    'recepcion.gestionar': ('Editar/eliminar recepciones', 'admin'),
     'entregas.gestionar': ('Crear/editar entregas', 'edit'),
     'devoluciones.gestionar': ('Crear/editar devoluciones', 'edit'),
     'folios.actualizar': ('Actualizar estado de folios', 'edit'),
