@@ -283,3 +283,18 @@ body {
 .sticky-top {
     z-index: 1020;
 }
+/* ---------- Comentarios de folio ---------- */
+.comentario-texto {
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.comentario-editar > summary {
+    list-style: none;
+    cursor: pointer;
+    display: inline-block;
+}
+
+.comentario-editar > summary::-webkit-details-marker {
+    display: none;
+}

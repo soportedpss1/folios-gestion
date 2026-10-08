@@ -6,8 +6,9 @@ from sqlalchemy import String, cast
 from sqlalchemy.orm import selectinload
 from app.decorators import permiso_requerido
 from app.extensions import db
-from app.folios.forms import ImportarFolioForm
+from app.folios.forms import ComentarioFolioForm, ImportarFolioForm
 from app.models.folio import Folio
+from app.models.folio_comentario import FolioComentario
 from app.models.tipo_certificado import TipoCertificado
 from app.services import import_excel
 from app.services.audit import log_audit
@@ -73,7 +74,91 @@ def index():
 @login_required
 def details(id):
     folio = get_or_404(Folio, id)
-    return render_template('folios/details.html', folio=folio)
+    return render_template('folios/details.html', **_contexto_detalle(folio))
+
+
+def _contexto_detalle(folio, form=None):
+    """Datos del detalle: folio, form de comentario y historial (más reciente
+    primero, con autor eager-loaded para evitar N+1)."""
+    comentarios = (FolioComentario.query
+                   .filter_by(folio_id=folio.id)
+                   .options(selectinload(FolioComentario.usuario))
+                   .order_by(FolioComentario.createAt.desc(),
+                             FolioComentario.id.desc())
+                   .all())
+    return {
+        'folio': folio,
+        'form': form or ComentarioFolioForm(),
+        'comentarios': comentarios,
+    }
+
+
+@folios_bp.route('/<int:id>/comentarios', methods=['POST'])
+@login_required
+def crear_comentario(id):
+    """Cualquier rol autenticado puede anotar: es trazabilidad, no edición."""
+    folio = get_or_404(Folio, id)
+    form = ComentarioFolioForm()
+    if not form.validate_on_submit():
+        # Re-render del detalle con el error del campo (vacío / >1000).
+        return render_template('folios/details.html',
+                               **_contexto_detalle(folio, form))
+
+    comentario = FolioComentario(
+        folio_id=folio.id,
+        user_id=current_user.id,
+        texto=form.texto.data.strip(),
+    )
+    db.session.add(comentario)
+    db.session.flush()
+    log_audit(current_user.id, 'INSERT', 'folio_comentarios', comentario.id,
+              None, {'texto': comentario.texto})
+    db.session.commit()
+    flash('Comentario añadido.', 'success')
+    return redirect(url_for('folios.details', id=folio.id) + '#comentarios')
+
+
+@folios_bp.route('/comentarios/<int:cid>/editar', methods=['POST'])
+@login_required
+def editar_comentario(cid):
+    comentario = get_or_404(FolioComentario, cid)
+    ancla = url_for('folios.details', id=comentario.folio_id) + '#comentarios'
+
+    if comentario.user_id != current_user.id:
+        flash('No tiene permisos para esta acción.', 'danger')
+        return redirect(ancla)
+
+    form = ComentarioFolioForm()
+    if not form.validate_on_submit():
+        flash('El comentario no puede estar vacío ni superar 1000 caracteres.',
+              'danger')
+        return redirect(ancla)
+
+    old = {'texto': comentario.texto}
+    comentario.texto = form.texto.data.strip()
+    log_audit(current_user.id, 'UPDATE', 'folio_comentarios', comentario.id,
+              old, {'texto': comentario.texto})
+    db.session.commit()
+    flash('Comentario actualizado.', 'success')
+    return redirect(ancla)
+
+
+@folios_bp.route('/comentarios/<int:cid>/borrar', methods=['POST'])
+@login_required
+def borrar_comentario(cid):
+    comentario = get_or_404(FolioComentario, cid)
+    ancla = url_for('folios.details', id=comentario.folio_id) + '#comentarios'
+
+    if comentario.user_id != current_user.id and not current_user.is_admin():
+        flash('No tiene permisos para esta acción.', 'danger')
+        return redirect(ancla)
+
+    old = {'texto': comentario.texto}
+    db.session.delete(comentario)
+    log_audit(current_user.id, 'DELETE', 'folio_comentarios', cid, old, None)
+    db.session.commit()
+    flash('Comentario eliminado.', 'success')
+    return redirect(ancla)
 
 
 @folios_bp.route('/validar-escaneados', methods=['POST'])

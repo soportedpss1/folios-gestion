@@ -9,6 +9,7 @@ from app.models.audit_log import AuditLog
 from app.models.sync_config import SyncConfig
 from app.models.permiso_usuario import PermisoUsuario
 from app.models.marca import MarcaConfig
+from app.models.folio_comentario import FolioComentario
 
 __all__ = [
     'Usuario',
@@ -22,4 +23,5 @@ __all__ = [
     'SyncConfig',
     'PermisoUsuario',
     'MarcaConfig',
+    'FolioComentario',
 ]
