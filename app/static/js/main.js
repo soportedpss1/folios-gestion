@@ -1,3 +1,178 @@
+// ---------- Toasts (mensajes flash + feedback AJAX) ----------
+// Los toasts del servidor llegan en #flash-toasts (components/flash.html);
+// este módulo aplica auto-dismiss, pausa al hover/foco y control de cola.
+// Uso desde plantillas: AppToast.mostrar('Mensaje', 'success'|'danger'|…).
+window.AppToast = (function () {
+    'use strict';
+
+    const ICONOS = {
+        success: 'fa-check-circle',
+        danger: 'fa-exclamation-circle',
+        warning: 'fa-exclamation-triangle',
+        info: 'fa-info-circle',
+    };
+    // danger (errores/permisos) queda 10s; el resto 4s.
+    const DURACION = { danger: 10000 };
+    const DURACION_DEFECTO = 4000;
+    const MAX_VISIBLE = 4;
+    const RETRASO_CIERRE = 200; // ms de fade-out antes de retirar del DOM
+
+    const estado = new Map(); // toast -> {restante, inicio, id}
+    const cola = [];
+    const sinMovimiento = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+    function contenedor() {
+        let cont = document.getElementById('flash-toasts');
+        if (!cont) {
+            cont = document.createElement('div');
+            cont.className = 'toast-container';
+            cont.id = 'flash-toasts';
+            document.body.appendChild(cont);
+        }
+        return cont;
+    }
+
+    function visibles() {
+        return contenedor().querySelectorAll(
+            '.app-toast:not(.en-cola):not(.closing)'
+        ).length;
+    }
+
+    function duracionDe(toast) {
+        const ms = parseInt(toast.dataset.duracion, 10);
+        return Number.isFinite(ms) ? ms : DURACION_DEFECTO;
+    }
+
+    function programar(toast) {
+        const est = estado.get(toast) || {};
+        clearTimeout(est.id);
+        if (est.restante === undefined || est.restante === null) {
+            est.restante = duracionDe(toast);
+        }
+        est.inicio = Date.now();
+        est.id = setTimeout(() => cerrar(toast), est.restante);
+        estado.set(toast, est);
+    }
+
+    function pausar(toast) {
+        const est = estado.get(toast);
+        if (!est || !est.id) return;
+        clearTimeout(est.id);
+        est.id = null;
+        est.restante = Math.max(0, est.restante - (Date.now() - est.inicio));
+    }
+
+    function reanudar(toast) {
+        const est = estado.get(toast);
+        if (!est || est.id) return;
+        programar(toast); // conserva el tiempo restante
+    }
+
+    function cerrar(toast) {
+        const est = estado.get(toast);
+        if (est) {
+            clearTimeout(est.id);
+            estado.delete(toast);
+        }
+        toast.classList.add('closing');
+        setTimeout(() => {
+            toast.remove();
+            drenar();
+        }, sinMovimiento.matches ? 0 : RETRASO_CIERRE);
+    }
+
+    function encolar(toast) {
+        cola.push(toast);
+        toast.classList.add('en-cola');
+    }
+
+    function drenar() {
+        while (cola.length && visibles() < MAX_VISIBLE) {
+            const toast = cola.shift();
+            if (!toast.isConnected) continue;
+            toast.classList.remove('en-cola');
+            vigilar(toast);
+            programar(toast);
+        }
+    }
+
+    function vigilar(toast) {
+        toast.addEventListener('mouseenter', () => pausar(toast));
+        toast.addEventListener('mouseleave', () => reanudar(toast));
+        toast.addEventListener('focusin', () => pausar(toast));
+        toast.addEventListener('focusout', () => reanudar(toast));
+        const btn = toast.querySelector('.app-toast-close');
+        if (btn && !btn.dataset.listo) {
+            btn.dataset.listo = '1';
+            btn.addEventListener('click', () => cerrar(toast));
+        }
+    }
+
+    function crear(mensaje, categoria) {
+        if (!ICONOS[categoria]) categoria = 'info';
+        const toast = document.createElement('div');
+        toast.className = 'app-toast app-toast-' + categoria;
+        toast.setAttribute('role', 'alert');
+        toast.setAttribute('aria-live', categoria === 'danger' ? 'assertive' : 'polite');
+        toast.dataset.duracion = String(DURACION[categoria] || DURACION_DEFECTO);
+
+        const icono = document.createElement('i');
+        icono.className = 'fas ' + ICONOS[categoria] + ' app-toast-icon';
+        icono.setAttribute('aria-hidden', 'true');
+
+        const texto = document.createElement('span');
+        texto.className = 'app-toast-msg';
+        texto.textContent = mensaje;
+
+        const cerrarBtn = document.createElement('button');
+        cerrarBtn.type = 'button';
+        cerrarBtn.className = 'app-toast-close';
+        cerrarBtn.setAttribute('aria-label', 'Cerrar aviso');
+        const equis = document.createElement('i');
+        equis.className = 'fas fa-xmark';
+        equis.setAttribute('aria-hidden', 'true');
+        cerrarBtn.appendChild(equis);
+        // El listener lo agrega vigilar() (evita duplicados).
+
+        toast.append(icono, texto, cerrarBtn);
+        return toast;
+    }
+
+    function mostrar(mensaje, categoria) {
+        const toast = crear(mensaje, categoria);
+        contenedor().appendChild(toast);
+        vigilar(toast);
+        if (visibles() > MAX_VISIBLE) {
+            encolar(toast);
+        } else {
+            programar(toast);
+        }
+        return toast;
+    }
+
+    // Los toasts renderizados por el servidor (redirect tras POST) se activan aquí.
+    function iniciar() {
+        const cont = document.getElementById('flash-toasts');
+        if (!cont) return;
+        cont.querySelectorAll('.app-toast').forEach((toast, indice) => {
+            vigilar(toast);
+            if (indice >= MAX_VISIBLE) {
+                encolar(toast);
+            } else {
+                programar(toast);
+            }
+        });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', iniciar);
+    } else {
+        iniciar();
+    }
+
+    return { mostrar: mostrar, cerrar: cerrar };
+})();
+
 document.addEventListener('DOMContentLoaded', function() {
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
     if (csrfToken) {

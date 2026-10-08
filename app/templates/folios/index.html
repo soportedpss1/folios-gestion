@@ -230,21 +230,14 @@
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Actualizado',
-                    text: data.message,
-                    timer: 1500,
-                    showConfirmButton: false
-                }).then(() => {
-                    location.reload();
-                });
+                AppToast.mostrar(data.message, 'success');
+                setTimeout(() => location.reload(), 1600);
             } else {
-                Swal.fire('Error', data.message, 'error');
+                AppToast.mostrar(data.message, 'danger');
             }
         })
-        .catch(error => {
-            Swal.fire('Error', 'Error de conexión.', 'error');
+        .catch(() => {
+            AppToast.mostrar('Error de conexión.', 'danger');
         });
     }
 

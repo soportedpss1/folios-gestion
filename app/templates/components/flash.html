@@ -1,19 +1,25 @@
 {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
+    <div class="toast-container" id="flash-toasts">
         {% for category, message in messages %}
-            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                {% if category == 'success' %}
-                    <i class="fas fa-check-circle me-2"></i>
-                {% elif category == 'danger' %}
-                    <i class="fas fa-exclamation-circle me-2"></i>
-                {% elif category == 'warning' %}
-                    <i class="fas fa-exclamation-triangle me-2"></i>
-                {% elif category == 'info' %}
-                    <i class="fas fa-info-circle me-2"></i>
-                {% endif %}
-                {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar aviso"></button>
-            </div>
+        <div class="app-toast app-toast-{{ category }}" role="alert"
+             aria-live="{{ 'assertive' if category == 'danger' else 'polite' }}"
+             data-duracion="{{ 10000 if category == 'danger' else 4000 }}">
+            {% if category == 'success' %}
+                <i class="fas fa-check-circle app-toast-icon" aria-hidden="true"></i>
+            {% elif category == 'danger' %}
+                <i class="fas fa-exclamation-circle app-toast-icon" aria-hidden="true"></i>
+            {% elif category == 'warning' %}
+                <i class="fas fa-exclamation-triangle app-toast-icon" aria-hidden="true"></i>
+            {% else %}
+                <i class="fas fa-info-circle app-toast-icon" aria-hidden="true"></i>
+            {% endif %}
+            <span class="app-toast-msg">{{ message }}</span>
+            <button type="button" class="app-toast-close" aria-label="Cerrar aviso">
+                <i class="fas fa-xmark" aria-hidden="true"></i>
+            </button>
+        </div>
         {% endfor %}
+    </div>
     {% endif %}
 {% endwith %}
