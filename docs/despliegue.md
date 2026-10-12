@@ -105,7 +105,7 @@ DB_ROOT_PASSWORD=cambie-esta-clave-de-root-solo-para-la-primera-vez
 #SHEET_SYNC_TOKEN=
 
 # --- Imagen a desplegar (opcional, para probar otra versión sin editar el compose) ---
-#FOLIOS_IMAGE=soportedpss1/folios-gestion:1.1.0
+#FOLIOS_IMAGE=soportedpss1/folios-gestion:1.2.0
 
 # --- Zona horaria de las fechas mostradas en la UI ---
 #TZ=America/Havana
@@ -295,7 +295,7 @@ para que la app no sea visible desde Internet sin el proxy.
 
 ```bash
 cd /opt/folios
-# opcional: fijar versión en .env → FOLIOS_IMAGE=soportedpss1/folios-gestion:1.1.0
+# opcional: fijar versión en .env → FOLIOS_IMAGE=soportedpss1/folios-gestion:1.2.0
 docker compose -f docker-compose.deploy.yml pull
 docker compose -f docker-compose.deploy.yml up -d
 docker compose -f docker-compose.deploy.yml exec -e FLASK_APP=run.py app flask db upgrade
