@@ -5,6 +5,7 @@ directorio privado, y solo se conoce el token — que viaja en la sesión del
 quien lo subió. Se borra al confirmar, o a los VIGENCIA_SEG si nadie confirma.
 """
 
+import os
 import re
 import secrets
 import tempfile
@@ -21,6 +22,9 @@ _TOKEN_RE = re.compile(r'^[A-Za-z0-9_-]{16,128}$')
 def _directorio():
     ruta = Path(tempfile.gettempdir()) / 'folios_respaldo'
     ruta.mkdir(mode=0o700, exist_ok=True)
+    # mkdir(mode=...) solo aplica al crear: si el dir ya existía con permisos
+    # laxos (p. ej. creado por otro proceso), aquí se re-fuerza.
+    ruta.chmod(0o700)
     return ruta
 
 
@@ -44,10 +48,16 @@ def limpiar_vencidos():
 
 
 def guardar(crudo):
-    """Guarda el respaldo y devuelve su token (un solo uso)."""
+    """Guarda el respaldo y devuelve su token (un solo uso).
+
+    El archivo se crea con 0600 (contiene hashes de contraseña y datos
+    personales): write_bytes dejaría el umask por defecto (0644).
+    """
     limpiar_vencidos()
     token = secrets.token_urlsafe(24)
-    _ruta(token).write_bytes(crudo)
+    fd = os.open(_ruta(token), os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with os.fdopen(fd, 'wb') as archivo:
+        archivo.write(crudo)
     return token
 
 

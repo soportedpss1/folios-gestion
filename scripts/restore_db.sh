@@ -20,15 +20,22 @@ sleep 5
 
 # gzip si viene comprimido, texto plano si no.
 if [[ "$archivo" == *.gz ]]; then
+    # Sin esta validación, un dump corrupto/truncado se "restauraba" vacío
+    # (mariadb recibía input parcial, salía 0 y el script decía "completada").
+    gzip -t "$archivo" || {
+        echo "El archivo está corrupto o incompleto: $archivo" >&2
+        exit 1
+    }
     dumper=(gzip -dc "$archivo")
 else
     dumper=(cat "$archivo")
 fi
 
-docker compose exec -T db sh -c \
+# Pipe en vez de process substitution: con pipefail, el exit status de
+# mariadb (o de gzip a mitad de stream) falla el script.
+"${dumper[@]}" | docker compose exec -T db sh -c \
   'export MYSQL_PWD="$MYSQL_ROOT_PASSWORD"
-   exec mariadb -uroot --default-character-set=utf8mb4 "$MYSQL_DATABASE"' \
-  < <("${dumper[@]}")
+   exec mariadb -uroot --default-character-set=utf8mb4 "$MYSQL_DATABASE"'
 
 echo "Restauración completada."
 echo "Si la base usaba alembic_version, ejecute ahora:"

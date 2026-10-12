@@ -20,9 +20,20 @@ from app.models.usuario import Usuario
 MIN_PASSWORD_LEN = 6
 
 
+class AmbiguoError(ValueError):
+    """El identificador coincide con el username de un usuario y el email de
+    otro: resetear a ciegas iría a la cuenta equivocada."""
+
+
 def find_user(ident):
-    return (Usuario.query.filter_by(username=ident).first()
-            or Usuario.query.filter_by(email=ident).first())
+    por_username = Usuario.query.filter_by(username=ident).first()
+    por_email = Usuario.query.filter_by(email=ident).first()
+    if (por_username is not None and por_email is not None
+            and por_username.id != por_email.id):
+        raise AmbiguoError(
+            f'{ident!r} es username de un usuario y email de otro; use el '
+            f'username exacto de la cuenta buscada')
+    return por_username or por_email
 
 
 def reset_password(ident, password=None, by=None):
@@ -74,6 +85,9 @@ def main(argv=None):
     with app.app_context():
         try:
             user, new_password = reset_password(args.usuario, args.password, args.by)
+        except AmbiguoError as exc:
+            print(f'Identificador ambiguo: {exc}', file=sys.stderr)
+            return 1
         except LookupError as exc:
             print(f'Usuario no encontrado: {exc.args[0]}', file=sys.stderr)
             return 1

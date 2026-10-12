@@ -142,3 +142,27 @@ def test_encabezado_pdf_tolera_fallo_db(app):
         assert logo_pdf() == ''
     finally:
         pdf_mod.get_marca = original
+
+
+def test_svg_rechazado_por_xss(admin_client):
+    """SVG con <script> no debe subirse: se sirve inline en /marca/logo."""
+    svg = io.BytesIO(
+        b'<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>')
+    resp = _post_marca(admin_client, logo=(svg, 'logo.svg'))
+    assert resp.status_code in (200, 302)
+    cfg = get_marca()
+    assert not cfg.logo, 'un SVG no debe guardarse en la marca'
+
+
+def test_logo_con_mime_no_confiable_se_serve_descargable(app):
+    """Mime heredado (backup/vieja versión) que no esté en la lista segura:
+    no debe servirse como documento ejecutable en la app."""
+    cfg = get_marca()
+    cfg.logo = b'<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>'
+    cfg.logo_mime = 'image/svg+xml'
+    db.session.commit()
+
+    resp = app.test_client().get('/marca/logo')
+    assert resp.status_code == 200
+    assert resp.content_type != 'image/svg+xml', 'no debe servirse SVG ejecutable'
+    assert resp.headers.get('Content-Disposition') == 'attachment'

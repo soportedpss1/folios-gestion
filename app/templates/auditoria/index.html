@@ -28,6 +28,9 @@
                     <option value="INSERT" {% if current_accion == 'INSERT' %}selected{% endif %}>INSERT</option>
                     <option value="UPDATE" {% if current_accion == 'UPDATE' %}selected{% endif %}>UPDATE</option>
                     <option value="DELETE" {% if current_accion == 'DELETE' %}selected{% endif %}>DELETE</option>
+                    <option value="BACKUP" {% if current_accion == 'BACKUP' %}selected{% endif %}>BACKUP</option>
+                    <option value="RESTORE" {% if current_accion == 'RESTORE' %}selected{% endif %}>RESTORE</option>
+                    <option value="SYNC" {% if current_accion == 'SYNC' %}selected{% endif %}>SYNC</option>
                 </select>
             </div>
             <div class="col-md-3">
@@ -41,6 +44,11 @@
                     <option value="folios" {% if current_tabla == 'folios' %}selected{% endif %}>folios</option>
                     <option value="entrega_folios" {% if current_tabla == 'entrega_folios' %}selected{% endif %}>entrega_folios</option>
                     <option value="devolucion_folios" {% if current_tabla == 'devolucion_folios' %}selected{% endif %}>devolucion_folios</option>
+                    <option value="folio_comentarios" {% if current_tabla == 'folio_comentarios' %}selected{% endif %}>folio_comentarios</option>
+                    <option value="permiso_usuarios" {% if current_tabla == 'permiso_usuarios' %}selected{% endif %}>permiso_usuarios</option>
+                    <option value="marca_config" {% if current_tabla == 'marca_config' %}selected{% endif %}>marca_config</option>
+                    <option value="backup" {% if current_tabla == 'backup' %}selected{% endif %}>backup</option>
+                    <option value="google_sheets" {% if current_tabla == 'google_sheets' %}selected{% endif %}>google_sheets</option>
                 </select>
             </div>
             <div class="col-md-3">

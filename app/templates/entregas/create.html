@@ -154,6 +154,15 @@
                 opt.text = item.texto;
                 select.appendChild(opt);
             }
+            // Aviso de truncamiento: el endpoint limita a 10000 folios; sin
+            // esto el usuario creía estar viendo todos los disponibles.
+            const total = Number(resp.headers.get('X-Folios-Total') || 0);
+            if (total > items.length) {
+                const opt = document.createElement('option');
+                opt.disabled = true;
+                opt.text = `…y ${total - items.length} folios disponibles no mostrados`;
+                select.appendChild(opt);
+            }
             for (const s of seleccionados) {
                 const opt = document.createElement('option');
                 opt.value = s.value;

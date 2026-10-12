@@ -1,5 +1,5 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, TextAreaField, SubmitField
+from wtforms import BooleanField, StringField, TextAreaField, SubmitField
 from wtforms.validators import DataRequired, Length, Regexp
 
 
@@ -11,4 +11,6 @@ class TipoCertificadoForm(FlaskForm):
     descripcion = TextAreaField('Descripción')
     color = StringField('Color de Etiqueta', default='#0D6EFD',
         validators=[Regexp(r'^#[0-9A-Fa-f]{6}$', message='Formato de color inválido. Use #RRGGBB.')])
+    # Reactivación: delete solo desactiva; edit es la única forma de volver.
+    activo = BooleanField('Activo', default=True)
     submit = SubmitField('Guardar')

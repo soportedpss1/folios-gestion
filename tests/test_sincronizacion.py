@@ -453,3 +453,18 @@ def test_navbar_muestra_temporizador(client, admin):
     resp = client.get('/dashboard/', follow_redirects=True)
     assert b'id="sync-timer"' in resp.data
     assert b'id="sync-timer-text"' in resp.data
+
+
+def test_sync_manual_auditoria_sobrevive_teardown(client, admin, monkeypatch):
+    """registrar_intento commitea ANTES de log_audit: sin un commit posterior,
+    el teardown de producción (session.remove por app context de petición)
+    descarta la fila y el SYNC nunca aparece en /auditoria."""
+    _login_admin(client, admin)
+    monkeypatch.setattr(
+        'app.sincronizacion.sincronizar',
+        lambda *a, **k: {'agregadas': 1, 'actualizadas': 0,
+                          'eliminadas': 0, 'total': 1})
+    client.post('/sincronizacion/sincronizar')
+    db.session.remove()  # lo que hace el teardown en producción
+    assert AuditLog.query.filter_by(tabla='google_sheets',
+                                    accion='SYNC').count() == 1

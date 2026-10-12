@@ -10,13 +10,22 @@ from app.services.mensajes import msg_solape
 # millones y dejar el servidor insertando filas durante minutos.
 MAX_FOLIOS_POR_RECEPCION = 10000
 
+# Columnas `folioInicial`/`folioFinal` son db.Integer: más allá del máximo
+# de INT, MariaDB en modo strict tira DataError (500) al hacer flush.
+FOLIO_MAX = 2147483647
+
 
 def detectar_solape(anioCert, tipoCert_id, folioInicial, folioFinal,
-                    excluir_id=None):
+                    excluir_id=None, bloquear=False):
     """Devuelve el rango existente que se cruza con estos valores, o None.
 
     `excluir_id` ignora una recepción propia: al editar, su rango actual se
     cruza siempre consigo mismo.
+
+    `bloquear=True` hace lectura de bloqueo (FOR UPDATE): bajo REPEATABLE
+    READ (default de MariaDB) una lectura consistente normal ve el snapshot
+    de la primera lectura de la transacción, anterior al lock, y se perdería
+    un commit concurrente. Solo aporta en MariaDB; SQLite (tests) lo ignora.
     """
     from app.models.recepcion_folio import RecepcionFolio
     query = RecepcionFolio.query.filter(
@@ -27,6 +36,8 @@ def detectar_solape(anioCert, tipoCert_id, folioInicial, folioFinal,
     )
     if excluir_id is not None:
         query = query.filter(RecepcionFolio.id != excluir_id)
+    if bloquear:
+        query = query.with_for_update()
     return query.first()
 
 
@@ -43,11 +54,13 @@ class RecepcionForm(FlaskForm):
     ])
     folioInicial = IntegerField('Folio Inicial', validators=[
         DataRequired(message='Este campo es obligatorio.'),
-        NumberRange(min=1, message='Ingrese un número mayor o igual a 1.'),
+        NumberRange(min=1, max=FOLIO_MAX,
+                    message=f'Ingrese un número de folio entre 1 y {FOLIO_MAX}.'),
     ])
     folioFinal = IntegerField('Folio Final', validators=[
         DataRequired(message='Este campo es obligatorio.'),
-        NumberRange(min=1, message='Ingrese un número mayor o igual a 1.'),
+        NumberRange(min=1, max=FOLIO_MAX,
+                    message=f'Ingrese un número de folio entre 1 y {FOLIO_MAX}.'),
     ])
     submit = SubmitField('Registrar Recepción')
     # Las ediciones lo sobrescriben por instancia: su propio rango no cuenta

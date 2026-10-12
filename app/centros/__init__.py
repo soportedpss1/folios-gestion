@@ -2,6 +2,7 @@ import json
 
 from flask import Blueprint, render_template, redirect, url_for, flash, make_response, request
 from flask_login import login_required, current_user
+from werkzeug.utils import secure_filename
 from app.extensions import db
 from app.models.centro import Centro
 from app.models.folio import Folio
@@ -93,10 +94,16 @@ def detail(id):
 def create():
     form = CentroForm()
     if form.validate_on_submit():
+        # Unicidad de nombre (case-insensitive), igual que en la importación:
+        # sin esto los duplicados aparecen indistinguibles en cada select.
+        if form.name.data.strip().lower() in _nombres_existentes():
+            flash('Ya existe un centro con ese nombre.', 'danger')
+            return render_template('centros/create.html', form=form)
         centro = Centro(
             name=form.name.data,
             telefono=form.telefono.data,
-            direccion=form.direccion.data
+            direccion=form.direccion.data,
+            activo=form.activo.data,
         )
         db.session.add(centro)
         db.session.flush()
@@ -114,9 +121,16 @@ def edit(id):
     datos_anteriores = centro.to_dict()
     form = CentroForm(obj=centro)
     if form.validate_on_submit():
+        clave = form.name.data.strip().lower()
+        if clave in _nombres_existentes() and clave != (centro.name or '').strip().lower():
+            flash('Ya existe un centro con ese nombre.', 'danger')
+            return render_template('centros/edit.html', form=form, centro=centro)
         centro.name = form.name.data
         centro.telefono = form.telefono.data
         centro.direccion = form.direccion.data
+        # Permite reactivar: delete solo pone activo=False y no había
+        # ninguna vida para volver a activo=True.
+        centro.activo = form.activo.data
         log_audit(current_user.id, 'UPDATE', 'centros', centro.id, datos_anteriores, centro.to_dict())
         db.session.commit()
         flash('Centro actualizado exitosamente.', 'success')
@@ -489,7 +503,11 @@ def export_excel(id):
 
     response = make_response(output.getvalue())
     response.headers['Content-Type'] = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    response.headers['Content-Disposition'] = f'attachment; filename=centro_{centro.name}_{date.today().strftime("%Y%m%d")}.xlsx'
+    # El nombre del centro es dato de usuario: con newline/acentos/quotes el
+    # header crudo tiraba ValueError en werkzeug → 500 para todos.
+    nombre = secure_filename(f'centro_{centro.name}') or 'centro'
+    response.headers.set('Content-Disposition', 'attachment',
+                         filename=f'{nombre}_{date.today().strftime("%Y%m%d")}.xlsx')
     return response
 
 
@@ -652,5 +670,7 @@ def export_pdf(id):
 
     response = make_response(pdf)
     response.headers['Content-Type'] = 'application/pdf'
-    response.headers['Content-Disposition'] = f'attachment; filename=centro_{centro.name}_{date.today().strftime("%Y%m%d")}.pdf'
+    nombre = secure_filename(f'centro_{centro.name}') or 'centro'
+    response.headers.set('Content-Disposition', 'attachment',
+                         filename=f'{nombre}_{date.today().strftime("%Y%m%d")}.pdf')
     return response

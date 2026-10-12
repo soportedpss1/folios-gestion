@@ -46,6 +46,10 @@ def _ejecutar_sync(cfg):
     # queda en sync_config; solo el sync manual deja auditoría de usuario.
     if current_user.is_authenticated:
         log_audit(current_user.id, 'SYNC', 'google_sheets', 0, None, counts)
+        # registrar_intento YA commiteó; sin este commit el teardown del
+        # request (session.remove) descarta la auditoría pendiente y el
+        # SYNC nunca aparece en /auditoria.
+        db.session.commit()
     return counts
 
 

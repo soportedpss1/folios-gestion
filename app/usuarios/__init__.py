@@ -27,6 +27,13 @@ def index():
 def create():
     form = UsuarioForm()
     if form.validate_on_submit():
+        # El grant `usuarios.gestionar` habilita la gestión, pero solo un
+        # admin puede crear otros admins (los grants suman capacidad de
+        # gestión, no de escalada).
+        if not current_user.is_admin() and form.rol.data == 'admin':
+            flash('Solo un administrador puede crear usuarios administradores.',
+                  'danger')
+            return render_template('usuarios/create.html', form=form)
         if Usuario.query.filter(
             (Usuario.username == form.username.data) | (Usuario.email == form.email.data)
         ).first():
@@ -41,8 +48,8 @@ def create():
         )
         user.set_password(form.password.data)
         db.session.add(user)
-        db.session.flush()
         try:
+            db.session.flush()  # dup concurrente → IntegrityError dentro del try
             log_audit(current_user.id, 'INSERT', 'usuarios', user.id, None,
                       {'username': user.username, 'email': user.email, 'rol': user.rol})
             db.session.commit()
@@ -65,6 +72,22 @@ def edit(id):
     form = UsuarioEditForm(obj=user)
 
     if form.validate_on_submit():
+        # Sin rol admin: no tocar administradores (resetear su contraseña
+        # sería takeover), no autoeditarse (autodesactivación/autorascenso)
+        # y no asignar el rol admin.
+        if not current_user.is_admin():
+            if user.is_admin():
+                flash('Solo un administrador puede modificar usuarios '
+                      'administradores.', 'danger')
+                return redirect(url_for('usuarios.index'))
+            if user.id == current_user.id:
+                flash('No puede modificar su propio usuario con este '
+                      'permiso.', 'danger')
+                return redirect(url_for('usuarios.index'))
+            if form.rol.data == 'admin':
+                flash('Solo un administrador puede asignar el rol '
+                      'administrador.', 'danger')
+                return render_template('usuarios/edit.html', form=form, user=user)
         if Usuario.query.filter(
             ((Usuario.username == form.username.data) | (Usuario.email == form.email.data)) &
             (Usuario.id != user.id)
@@ -79,6 +102,14 @@ def edit(id):
             flash('No se puede desactivar ni degradar al último administrador activo.', 'danger')
             return render_template('usuarios/edit.html', form=form, user=user)
 
+        # Refleja el guard de delete: edit no debe permitir desactivarse
+        # ni cambiarse de rol a uno mismo (auto-logout/auto-escalada).
+        if user.id == current_user.id and (
+                form.rol.data != user.rol or not form.activo.data):
+            flash('No puede cambiar su propio rol ni desactivarse desde '
+                  'la edición.', 'danger')
+            return redirect(url_for('usuarios.index'))
+
         user.name = form.name.data
         user.username = form.username.data
         user.email = form.email.data
@@ -91,7 +122,9 @@ def edit(id):
         try:
             log_audit(current_user.id, 'UPDATE', 'usuarios', user.id, datos_anteriores,
                       {'username': user.username, 'email': user.email, 'rol': user.rol,
-                       'activo': user.activo})
+                       'activo': user.activo,
+                       # Un reset desde la UI quedaba indistinguible en /auditoria.
+                       'password_changed': bool(form.password.data)})
             db.session.commit()
         except IntegrityError:
             db.session.rollback()
@@ -109,6 +142,11 @@ def delete(id):
     user = get_or_404(Usuario, id)
     if user.id == current_user.id:
         flash('No puede desactivar su propio usuario.', 'danger')
+        return redirect(url_for('usuarios.index'))
+
+    if not current_user.is_admin() and user.is_admin():
+        flash('Solo un administrador puede desactivar usuarios administradores.',
+              'danger')
         return redirect(url_for('usuarios.index'))
 
     if _ultimo_admin_excluido(user):

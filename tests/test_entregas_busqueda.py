@@ -71,3 +71,15 @@ def test_create_entrega_rechaza_folio_no_disponible(auth_client, app, tipo, cent
     assert resp.status_code == 200
     # no se crea una segunda entrega (validación de choices/estado)
     assert EntregaFolio.query.filter_by(folio_id=folio.id).count() == 0
+
+
+def test_api_disponibles_anuncia_total_truncado(auth_client, app, tipo):
+    """Sin indicador, el select mostraba los primeros 10000 folios como si
+    fueran todos: los del tope quedaban inalcanzables sin aviso."""
+    for n in range(5):
+        make_folio(tipo, anio=Y, numero=8000 + n)
+
+    resp = auth_client.get('/entregas/api/folios-disponibles?limit=3')
+    assert resp.status_code == 200
+    assert len(resp.get_json()) == 3
+    assert resp.headers.get('X-Folios-Total') == '5'

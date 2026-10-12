@@ -62,11 +62,19 @@ def index():
     tipos = TipoCertificado.query.filter_by(activo=True).order_by(TipoCertificado.name).all()
     centros = Centro.query.filter_by(activo=True).order_by(Centro.name).all()
 
+    # Año del filtro: ausente/vacío = "Todos" (el select no preselecciona);
+    # el form es GET, así que al recargar debe respetar lo elegido.
+    crudo = request.args.get('anioCert', '')
+    try:
+        current_anio = int(crudo) if crudo else None
+    except ValueError:
+        current_anio = None
+
     return render_template('reportes/index.html',
         folios=[],
         tipos=tipos,
         centros=centros,
-        current_anio=datetime.now().year,
+        current_anio=current_anio,
         current_tipo=None,
         current_centro=None,
         current_estado=None

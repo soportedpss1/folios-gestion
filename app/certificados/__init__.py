@@ -30,10 +30,11 @@ def create():
             flash(DUP_TIPO_CERT, 'danger')
             return render_template('certificados/create.html', form=form)
 
-        cert = TipoCertificado(name=form.name.data, descripcion=form.descripcion.data, color=form.color.data)
+        cert = TipoCertificado(name=form.name.data, descripcion=form.descripcion.data,
+                               color=form.color.data, activo=form.activo.data)
         db.session.add(cert)
         try:
-            db.session.flush()
+            db.session.flush()  # dup concurrente → IntegrityError dentro del try
             log_audit(current_user.id, 'INSERT', 'tipo_certificados', cert.id, None, cert.to_dict())
             db.session.commit()
         except IntegrityError:
@@ -64,6 +65,8 @@ def edit(id):
         cert.name = form.name.data
         cert.descripcion = form.descripcion.data
         cert.color = form.color.data
+        # Reactivación: delete solo pone activo=False.
+        cert.activo = form.activo.data
         try:
             log_audit(current_user.id, 'UPDATE', 'tipo_certificados', cert.id, datos_anteriores, cert.to_dict())
             db.session.commit()

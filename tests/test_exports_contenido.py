@@ -254,3 +254,18 @@ def test_centros_lista_pdf_escapa_html(auth_client, app, centro, monkeypatch):
     html = _FakeHTML.captured[0]
     assert '<script>' not in html, 'HTML sin escapar en PDF'
     assert '&lt;script&gt;' in html, 'escape ausente en PDF'
+
+
+def test_filtro_anio_con_todos_y_rango_dinamico(auth_client):
+    """El select de año de Reportes estaba hardcodeado 2025-2030 sin 'Todos':
+    folios de años legítimos anteriores quedaban inexportables."""
+    import re
+    from datetime import datetime
+    text = auth_client.get('/reportes/').get_data(as_text=True)
+    bloque = re.search(r'<select name="anioCert".*?</select>', text, re.S)
+    assert bloque, 'el filtro de año existe'
+    opciones = bloque.group(0)
+    assert '<option value="">Todos</option>' in opciones, 'falta la opción Todos'
+    anio = datetime.now().year
+    assert str(anio - 5) in opciones, 'el rango debe ser dinámico hacia atrás'
+    assert str(anio) in opciones

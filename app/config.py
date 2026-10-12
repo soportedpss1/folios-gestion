@@ -1,8 +1,20 @@
 import os
 from datetime import timedelta
+from urllib.parse import quote_plus
+
 from dotenv import load_dotenv
 
 load_dotenv()
+
+
+def construir_url_db(user, password, host, port, name):
+    """URL de SQLAlchemy con las credenciales escapadas.
+
+    Un password generado puede traer @ : / # % — sin escapar rompe la URL
+    (el motor la interpreta mal y la conexión falla o va a otro destino).
+    """
+    return (f'mysql+pymysql://{quote_plus(user or "")}:{quote_plus(password or "")}'
+            f'@{host}:{port}/{name}')
 
 
 def _env_bool(name, default=None):
@@ -27,8 +39,8 @@ class Config:
     DB_PASSWORD = os.environ.get('DB_PASSWORD')
 
     # DATABASE_URL (si existe) tiene prioridad — usado para migraciones/entornos alternativos
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or (
-        f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or construir_url_db(
+        DB_USER, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ENGINE_OPTIONS = {

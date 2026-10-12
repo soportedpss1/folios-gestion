@@ -248,3 +248,60 @@ def test_sidebar_recepcion_oculto_para_operador(auth_client):
 
 def test_sidebar_escaneos_oculto_para_operador(auth_client):
     assert '/escaneos' not in auth_client.get('/dashboard/').get_data(as_text=True)
+
+
+# --- usuarios.gestionar: el grant no debe poder escalar a admin ---
+
+
+def test_grant_usuarios_no_puede_crear_admin(client, app):
+    from app.models.usuario import Usuario
+    lectura = make_user('lec_crea', 'lectura')
+    db.session.add(PermisoUsuario(user_id=lectura.id, permiso='usuarios.gestionar'))
+    db.session.commit()
+    client.post('/auth/login', data={'username': 'lec_crea', 'password': 'pass12345'})
+
+    client.post('/usuarios/create', data={
+        'name': 'Nuevo Admin', 'username': 'nuevo_admin',
+        'email': 'nuevo@example.com', 'password': 'secret123',
+        'confirm_password': 'secret123', 'rol': 'admin',
+    }, follow_redirects=True)
+    assert not Usuario.query.filter_by(username='nuevo_admin').count(), \
+        'un grant no debe permitir crear administradores'
+
+
+def test_grant_usuarios_no_puede_editar_admin(client, app):
+    from app.models.usuario import Usuario
+    lectura = make_user('lec_edita', 'lectura')
+    objetivo = make_user('admin_obj', 'admin')
+    make_user('admin_extra', 'admin')  # para que no aplique el guard de último admin
+    db.session.add(PermisoUsuario(user_id=lectura.id, permiso='usuarios.gestionar'))
+    db.session.commit()
+    client.post('/auth/login', data={'username': 'lec_edita', 'password': 'pass12345'})
+
+    client.post(f'/usuarios/{objetivo.id}/edit', data={
+        'name': objetivo.name, 'username': objetivo.username,
+        'email': 'admin_obj@example.com', 'password': 'hackeada1',
+        'rol': 'operador', 'activo': 'y',
+    }, follow_redirects=True)
+
+    db.session.refresh(objetivo)
+    assert objetivo.rol == 'admin', 'un grant no debe tocar el rol de un admin'
+    assert objetivo.check_password('pass12345'), \
+        'un grant no debe poder resetear la contraseña de un admin'
+    assert not objetivo.check_password('hackeada1')
+
+
+def test_grant_usuarios_no_puede_autorascalar(client, app):
+    from app.models.usuario import Usuario
+    lectura = make_user('lec_auto', 'lectura')
+    db.session.add(PermisoUsuario(user_id=lectura.id, permiso='usuarios.gestionar'))
+    db.session.commit()
+    client.post('/auth/login', data={'username': 'lec_auto', 'password': 'pass12345'})
+
+    client.post(f'/usuarios/{lectura.id}/edit', data={
+        'name': lectura.name, 'username': lectura.username,
+        'email': 'lec_auto@example.com', 'rol': 'admin', 'activo': 'y',
+    }, follow_redirects=True)
+
+    db.session.refresh(lectura)
+    assert lectura.rol == 'lectura', 'autoedición no debe poder subir a admin'

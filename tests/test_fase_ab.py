@@ -168,7 +168,7 @@ def test_edit_entrega_no_toca_estado_del_folio(auth_client, app, tipo, centro, o
     db.session.commit()
 
     resp = auth_client.post(f'/entregas/{entrega.id}/edit', data={
-        'folio_id': folio.id, 'fechaEntrega': '2026-03-05', 'centroId': centro.id,
+        'folio_id': folio.id, 'fechaEntrega': '2026-01-15', 'centroId': centro.id,
     }, follow_redirects=True)
     assert resp.status_code == 200
     assert 'exitosamente' in resp.get_data(as_text=True), (
@@ -177,7 +177,7 @@ def test_edit_entrega_no_toca_estado_del_folio(auth_client, app, tipo, centro, o
     db.session.refresh(folio)
     db.session.refresh(entrega)
     assert folio.estado == 'devuelto', f'estado reescrito a {folio.estado}'
-    assert entrega.fechaEntrega == date(Y, 3, 5)
+    assert entrega.fechaEntrega == date(Y, 1, 15)
 
 
 def test_edit_entrega_muestra_centro_desactivado(auth_client, app, tipo, centro, operador):

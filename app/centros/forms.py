@@ -1,6 +1,6 @@
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileAllowed, FileField, FileRequired
-from wtforms import StringField, SubmitField
+from wtforms import BooleanField, StringField, SubmitField
 from wtforms.validators import DataRequired, Length
 
 
@@ -15,6 +15,8 @@ class CentroForm(FlaskForm):
     direccion = StringField('Dirección', validators=[
         Length(max=255, message='No puede superar 255 caracteres.'),
     ])
+    # Reactivación: delete solo desactiva; edit es la única forma de volver.
+    activo = BooleanField('Activo', default=True)
     submit = SubmitField('Guardar')
 
 

@@ -323,3 +323,33 @@ def test_delete_bloqueado_si_estado_devuelto(admin_client, tipo, centro,
 
     assert 'No se puede eliminar' in resp.get_data(as_text=True)
     assert RecepcionFolio.query.count() == 1
+
+
+def test_delete_bloqueado_si_folio_tiene_comentario(admin_client, tipo, app):
+    """folio_comentarios FK sin ON DELETE: borrar el folio daría IntegrityError."""
+    from app.models.folio_comentario import FolioComentario
+    from app.models.usuario import Usuario
+
+    crear_recepcion(admin_client, tipo.id)
+    folio = Folio.query.first()
+    admin = Usuario.query.filter_by(rol='admin').first()
+    db.session.add(FolioComentario(folio_id=folio.id, user_id=admin.id,
+                                   texto='anotación'))
+    db.session.commit()
+
+    resp = eliminar(admin_client, unica_recepcion().id)
+    assert Folio.query.count() == 6, 'no debe borrar folios con comentarios'
+    assert 'No se puede eliminar' in resp.get_data(as_text=True)
+
+
+def test_create_valor_fuera_de_int_rechazado(admin_client, tipo):
+    """folioInicial/FolioFinal fuera del rango de INT: el form debe rechazar
+    (MariaDB strict tiraría DataError → 500 en create)."""
+    resp = admin_client.post(
+        '/recepcion/create',
+        data={'fecha': '2026-09-28', 'anioCert': 2026, 'tipoCert': tipo.id,
+              'folioInicial': 9999999999, 'folioFinal': 9999999999},
+        follow_redirects=True,
+    )
+    assert resp.status_code == 200, 'no debe haber 500 por overflow de INT'
+    assert RecepcionFolio.query.count() == 0, 'el form debe rechazar el rango'

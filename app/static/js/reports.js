@@ -11,6 +11,17 @@
 
     let currentParams = '';
 
+    // Todo dato que viene del servidor (nombre de tipo/centro/usuarios)
+    // se inserta vía innerHTML: sin escapar sería XSS almacenado.
+    function escapeHtml(v) {
+        return String(v ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
     function buildParams(page) {
         const fd = new FormData(filterForm);
         const params = new URLSearchParams();
@@ -52,21 +63,24 @@
                         ? '<span class="badge bg-danger">Entregado</span>'
                         : f.estado === 'devuelto'
                             ? '<span class="badge bg-success">Devuelto</span>'
-                            : '<span class="badge bg-secondary">' + f.estado + '</span>';
+                            : '<span class="badge bg-secondary">' + escapeHtml(f.estado) + '</span>';
+            // Solo #RRGGBB válido (el form lo valida igual); igual se escapa.
+            const colorSeguro = /^#[0-9A-Fa-f]{6}$/.test(String(f.tipo_color || ''))
+                ? escapeHtml(f.tipo_color) : '#6c757d';
 
             return '<tr>'
-                + '<td class="fw-bold col-folio">' + f.folio + '</td>'
-                + '<td><span class="badge" style="background-color:' + f.tipo_color + '">' + f.tipo_nombre + '</span></td>'
-                + '<td>' + f.anioCert + '</td>'
-                + '<td>' + (f.centro || '<span class="text-muted">-</span>') + '</td>'
+                + '<td class="fw-bold col-folio">' + escapeHtml(f.folio) + '</td>'
+                + '<td><span class="badge" style="background-color:' + colorSeguro + '">' + escapeHtml(f.tipo_nombre) + '</span></td>'
+                + '<td>' + escapeHtml(f.anioCert) + '</td>'
+                + '<td>' + (f.centro ? escapeHtml(f.centro) : '<span class="text-muted">-</span>') + '</td>'
                 + '<td>' + estadoBadge + '</td>'
                 + '<td><i class="fas ' + (f.digitado ? 'fa-check text-success' : 'fa-times text-muted') + '"></i></td>'
                 + '<td><i class="fas ' + (f.escaneado ? 'fa-check text-success' : 'fa-times text-muted') + '"></i></td>'
                 + '<td><i class="fas ' + (f.nulo ? 'fa-check text-success' : 'fa-times text-muted') + '"></i></td>'
-                + '<td>' + (f.fechaEntrega || '<span class="text-muted">-</span>') + '</td>'
-                + '<td>' + (f.entregado_por ? '<span class="badge bg-primary">' + f.entregado_por + '</span>' : '<span class="text-muted">-</span>') + '</td>'
-                + '<td>' + (f.fechaDevolucion || '<span class="text-muted">-</span>') + '</td>'
-                + '<td>' + (f.recibido_por ? '<span class="badge bg-success">' + f.recibido_por + '</span>' : '<span class="text-muted">-</span>') + '</td>'
+                + '<td>' + (f.fechaEntrega ? escapeHtml(f.fechaEntrega) : '<span class="text-muted">-</span>') + '</td>'
+                + '<td>' + (f.entregado_por ? '<span class="badge bg-primary">' + escapeHtml(f.entregado_por) + '</span>' : '<span class="text-muted">-</span>') + '</td>'
+                + '<td>' + (f.fechaDevolucion ? escapeHtml(f.fechaDevolucion) : '<span class="text-muted">-</span>') + '</td>'
+                + '<td>' + (f.recibido_por ? '<span class="badge bg-success">' + escapeHtml(f.recibido_por) + '</span>' : '<span class="text-muted">-</span>') + '</td>'
                 + '</tr>';
         });
         reportesBody.innerHTML = rows.join('');

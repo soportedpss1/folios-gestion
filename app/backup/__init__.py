@@ -20,6 +20,7 @@ from app.backup import staging
 from app.backup.forms import ConfirmarForm, PrevisualizarForm
 from app.decorators import admin_required
 from app.extensions import db
+from app.models.usuario import Usuario
 from app.services.audit import log_audit
 from app.services.backup import (
     ErrorRespaldo,
@@ -124,6 +125,14 @@ def restaurar():
         flash('El archivo no es JSON válido.', 'danger')
         return redirect(url_for('backup.index'))
 
+    # El actor se resuelve ANTES de restaurar: el commit de
+    # restaurar_backup expira la sesión y, si la DB restaurada no tiene la
+    # fila del admin logueado (p. ej. respaldo de otro entorno), tocar
+    # current_user después daba ObjectDeletedError → 500 tras una operación
+    # destructiva exitosa, y sin la fila de auditoría RESTORE.
+    actor_id = current_user.id
+    actor_nombre = current_user.username
+
     try:
         insertadas = restaurar_backup(payload)
     except ErrorRespaldo as exc:
@@ -136,8 +145,16 @@ def restaurar():
     total = sum(insertadas.values())
     # Auditoría DESPUÉS del commit de la restauración: sobrevive aunque el
     # respaldo haya reemplazado audit_logs con filas viejas.
-    log_audit(current_user.id, 'RESTORE', 'backup', 0, None,
-              {'tablas': len(insertadas), 'filas': total})
+    if db.session.get(Usuario, actor_id) is None:
+        # El respaldo no incluyó al actor: se audita con el primer admin
+        # activo restante (el payload exige al menos uno).
+        reemplazo = Usuario.query.filter_by(activo=True) \
+            .order_by(Usuario.id).first()
+        actor_audit_id = reemplazo.id if reemplazo else actor_id
+    else:
+        actor_audit_id = actor_id
+    log_audit(actor_audit_id, 'RESTORE', 'backup', 0, None,
+              {'tablas': len(insertadas), 'filas': total, 'actor': actor_nombre})
     db.session.commit()
     flash(f'Respaldo restaurado: {len(insertadas)} tablas, {total} filas.', 'success')
     return redirect(url_for('backup.index'))

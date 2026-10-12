@@ -51,7 +51,11 @@ def folios_disponibles():
     # limit solo lo manda el create (sin búsqueda pide el total del tipo);
     # sin el parámetro se mantiene el tope de 100 que usa editar entrega.
     limit = min(max(request.args.get('limit', 100, type=int), 1), mov.MAX_FOLIOS_SELECT)
-    return jsonify(mov.folios_disponibles(q, tipo_id, limit))
+    folios, total = mov.folios_disponibles(q, tipo_id, limit)
+    response = jsonify(folios)
+    # El select puede quedar truncado (total > limit): el JS avisa al usuario.
+    response.headers['X-Folios-Total'] = str(total)
+    return response
 
 
 @entregas_bp.route('/create', methods=['GET', 'POST'])
@@ -262,6 +266,18 @@ def edit(id):
         form.centroId.data = entrega.centroId
 
     if form.validate_on_submit():
+        devolucion = entrega.folio.devolucion
+        # Con la devolución ya registrada, la entrega no puede re-apuntarse:
+        # Reportes y Devoluciones divergirían para siempre sobre qué centro
+        # tuvo el folio.
+        if devolucion is not None and form.centroId.data != devolucion.centroId:
+            flash('El folio ya fue devuelto: no puede cambiarse el centro '
+                  'de esta entrega.', 'danger')
+            return render_template('entregas/edit.html', form=form, entrega=entrega)
+        if devolucion is not None and form.fechaEntrega.data > devolucion.fechaDevolucion:
+            flash('La fecha de entrega no puede ser posterior a la '
+                  'devolución registrada.', 'danger')
+            return render_template('entregas/edit.html', form=form, entrega=entrega)
         try:
             entrega.fechaEntrega = form.fechaEntrega.data
             entrega.centroId = form.centroId.data

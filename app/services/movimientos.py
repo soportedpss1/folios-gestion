@@ -87,9 +87,11 @@ def choices_folios_devolucion(folio_ids, centro_id):
 
 
 def folios_disponibles(q, tipo_id=None, limit=100):
-    """JSON de búsqueda para el select de nueva entrega.
+    """(lista, total) de búsqueda para el select de nueva entrega.
 
     `tipo_id` es solo un filtro de vista (no se valida en el POST).
+    `total` es el conteo sin el límite: el JS detecta con él si el select
+    quedó truncado y avisa al usuario.
     """
     query = Folio.query.filter_by(estado='disponible', nulo=False)
     if tipo_id:
@@ -97,9 +99,11 @@ def folios_disponibles(q, tipo_id=None, limit=100):
     if q:
         # Folio.folio es Integer: LIKE directo deprecado (SADeprecationWarning)
         query = query.filter(cast(Folio.folio, String).like(f'%{q}%'))
+    total = query.count()
     folios = query.options(selectinload(Folio.tipo_cert)) \
         .order_by(Folio.folio, Folio.id).limit(limit).all()
-    return [{'id': f.id, 'texto': f'Folio {f.folio} - {f.tipo_cert.name}'} for f in folios]
+    lista = [{'id': f.id, 'texto': f'Folio {f.folio} - {f.tipo_cert.name}'} for f in folios]
+    return lista, total
 
 
 def folios_entregados_a(centro_id, tipo_id=None):
@@ -222,6 +226,9 @@ def crear_movimiento(*, modelo, fecha_field, folio_ids, fecha, centro_id, user,
     `user` es el responsable del registro (userId); `actor` quien ejecuta la
     operación y aparece en audit_logs (por defecto, el mismo).
     """
+    # IDs repetidos en el POST: el segundo encuentro vería el estado ya
+    # mutado y contaría un "omitido" inexistente en el flash.
+    folio_ids = list(dict.fromkeys(folio_ids))
     creados = 0
     for folio_id in folio_ids:
         folio = db.session.get(Folio, folio_id)

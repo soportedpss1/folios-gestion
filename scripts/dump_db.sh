@@ -12,6 +12,10 @@ DESTINO="${1:-backups}"
 mkdir -p "$DESTINO"
 archivo="$DESTINO/db_$(date +%Y%m%d_%H%M%S).sql.gz"
 
+# Si el pipeline muere (DB caída, disco lleno), el .sql.gz truncado que quedó
+# parecería un respaldo válido: se borra.
+trap 'rm -f "$archivo"' ERR
+
 # root porque el usuario de la app (folios_app) no tiene LOCK TABLES / SHOW VIEW.
 # La contraseña viaja por MYSQL_PWD (env del contenedor), nunca en argv.
 # --hex-blob: marca_config.logo/favicon son BLOB; sin esto se vuelven ilegibles.

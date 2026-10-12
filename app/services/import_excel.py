@@ -7,6 +7,7 @@ plantilla—; la validación de negocio queda en cada blueprint.
 """
 
 import json
+import zipfile
 from datetime import date, datetime
 from io import BytesIO
 
@@ -19,6 +20,11 @@ from app.services.excel import neutralizar_formulas
 # recepción lo define su blueprint porque allí cada fila es un rango completo.
 MAX_FOLIOS_POR_ARCHIVO = 5000
 
+# MAX_CONTENT_LENGTH acota el .xlsx COMPRIMIDO; openpyxl carga en memoria el
+# XML descomprimido (sharedStrings entero) → un zip de unos pocos MB puede
+# descomprimirse en gigas y tumbar al worker (OOM).
+MAX_XLSX_DECOMPRESION = 200 * 1024 * 1024
+
 # Columna final opcional de las plantillas: username del dueño de la fila.
 # Los archivos antiguos sin ella se siguen aceptando (fila = usuario actual).
 COLUMNA_USUARIO = 'usuario'
@@ -26,6 +32,21 @@ COLUMNA_USUARIO = 'usuario'
 
 class ImportExcelError(Exception):
     """Archivo ilegible o con formato incorrecto. El mensaje ya está en español."""
+
+
+def _validar_tamano_descomprimido(file_storage):
+    """Rechaza .xlsx cuyo contenido descomprimido supera MAX_XLSX_DECOMPRESION."""
+    try:
+        with zipfile.ZipFile(file_storage.stream) as zf:
+            total = sum(info.file_size for info in zf.infolist())
+    except zipfile.BadZipFile:
+        return  # load_workbook dará el mensaje genérico de "no es un Excel"
+    finally:
+        file_storage.stream.seek(0)
+    if total > MAX_XLSX_DECOMPRESION:
+        mb = MAX_XLSX_DECOMPRESION // (1024 * 1024)
+        raise ImportExcelError(
+            f'El archivo ocupa demasiado al descomprimirse (máximo {mb} MB).')
 
 
 def leer_filas(file_storage, headers, max_filas, opcionales=()):
@@ -38,7 +59,10 @@ def leer_filas(file_storage, headers, max_filas, opcionales=()):
     filas. Las filas totalmente vacías se ignoran.
     """
     try:
+        _validar_tamano_descomprimido(file_storage)
         wb = load_workbook(file_storage.stream, read_only=True, data_only=True)
+    except ImportExcelError:
+        raise
     except Exception:
         raise ImportExcelError('El archivo no es un Excel válido (.xlsx).')
 

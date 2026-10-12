@@ -36,6 +36,9 @@ TABLAS_ORDEN = (
     'folios',
     'entrega_folios',
     'devolucion_folios',
+    # Hijos de folios/usuarios (FK sin ON DELETE): se insertan después de
+    # ambos y se borran antes, o la restauración revienta con errno 1451.
+    'folio_comentarios',
     'audit_logs',
     'permiso_usuarios',
     'sync_config',
@@ -121,8 +124,16 @@ def _revive(columna, valor):
         except Exception as exc:
             raise ErrorRespaldo(f'Imagen corrupta en {columna.name}.') from exc
     if isinstance(tipo, Boolean):
-        return bool(valor)
-    if isinstance(tipo, Integer) and not isinstance(valor, int):
+        # bool('false') is True: strings nunca (respaldos editados a mano
+        # reactivarían filas en silencio); 0/1 entero sí, por JSON/SQL.
+        if isinstance(valor, bool):
+            return valor
+        if valor in (0, 1) and not isinstance(valor, str):
+            return bool(valor)
+        raise ErrorRespaldo(
+            f'Booleano inválido en columna {columna.name}: {valor!r}.')
+    if isinstance(tipo, Integer) and (not isinstance(valor, int)
+                                      or isinstance(valor, bool)):
         raise ErrorRespaldo(f'Entero inválido en columna {columna.name}.')
     return valor
 
@@ -188,6 +199,15 @@ def _validar_usuarios(datos):
             'El respaldo no incluye usuarios (la tabla usuarios está vacía): '
             'restaurarlo dejaría la aplicación sin cuentas y no podría '
             'iniciar sesión.')
+    hay_admin_activo = any(
+        fila.get('activo') in (True, 1) and fila.get('rol') == 'admin'
+        for fila in datos['usuarios']
+    )
+    if not hay_admin_activo:
+        raise ErrorRespaldo(
+            'El respaldo no deja ningún usuario administrador activo: '
+            'tras restaurarlo nadie podría gestionar la aplicación '
+            '(solo sería recuperable con acceso directo a la base de datos).')
 
 
 def analizar_compatibilidad(datos, esquema_respaldo):

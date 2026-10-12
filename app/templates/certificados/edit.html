@@ -50,6 +50,12 @@
 
                     <hr>
 
+                    <div class="form-check form-switch mb-3">
+                        {{ form.activo(class="form-check-input") }}
+                        <label class="form-check-label fw-semibold">{{ form.activo.label.text }}</label>
+                        <div class="form-text">Para reactivar un tipo desactivado, márquelo y guarde.</div>
+                    </div>
+
                     <div class="d-flex justify-content-end gap-2">
                         <a href="{{ url_for('certificados.index') }}" class="btn btn-outline-secondary">Cancelar</a>
                         {{ form.submit(class="btn btn-primary") }}

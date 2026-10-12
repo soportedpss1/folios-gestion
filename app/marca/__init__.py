@@ -30,7 +30,7 @@ def _imagen_de(archivo, etiqueta, errores):
         return None
     mime = _mime_de(archivo.filename)
     if mime is None:
-        errores.append(f'{etiqueta}: formato no permitido (PNG, JPG, SVG o WEBP).')
+        errores.append(f'{etiqueta}: formato no permitido (PNG, JPG o WEBP).')
         return None
     if not datos:
         errores.append(f'{etiqueta}: el archivo está vacío.')
@@ -39,7 +39,18 @@ def _imagen_de(archivo, etiqueta, errores):
 
 
 def _imagen_response(blob, mime):
-    return Response(blob, mimetype=mime or 'image/png', headers={
+    if not mime:
+        mime = 'image/png'
+    # Mime fuera de la lista segura (SVG heredado de versiones viejas o
+    # inyectado vía respaldo): entregarlo con su MIME real lo convierte en
+    # un documento ejecutable en la app. Se descarga, no se muestra.
+    if mime not in MIME_POR_EXTENSION.values():
+        return Response(blob, mimetype='application/octet-stream', headers={
+            'X-Content-Type-Options': 'nosniff',
+            'Content-Disposition': 'attachment',
+            'Cache-Control': 'public, max-age=3600',
+        })
+    return Response(blob, mimetype=mime, headers={
         'X-Content-Type-Options': 'nosniff',
         'Cache-Control': 'public, max-age=3600',
     })

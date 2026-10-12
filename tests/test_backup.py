@@ -411,3 +411,63 @@ def test_previsualizar_servicio_no_toca_db(app, admin, centro):
     assert analisis['tablas']['centros']['filas'] == 1
     assert Centro.query.filter_by(name='Centro de Prueba').count() == 1
     assert Centro.query.filter_by(name='Centro Nuevo').count() == 0
+
+
+def test_tablas_orden_cubre_todas_las_tablas(app):
+    """TABLAS_ORDEN debe enumerar exactamente las tablas del modelo.
+
+    Una tabla ausente (p. ej. folio_comentarios) se omite del respaldo y
+    rompe la restauración: el DELETE de los padres choca con su FK.
+    """
+    assert set(TABLAS_ORDEN) == set(db.metadata.tables.keys()), \
+        'TABLAS_ORDEN desalineado con los modelos'
+
+
+def test_respaldo_sin_admin_activo_rechazado(admin_client):
+    """Un respaldo donde todos son lectura/inactivo deja la app sin nadie
+    que pueda gestionarla (lockout total, solo SQL manual lo rescata)."""
+    respaldo = crear_backup()
+    for fila in respaldo['datos']['usuarios']:
+        fila['activo'] = False
+        fila['rol'] = 'lectura'
+    resp = _analizar(admin_client, respaldo)
+    assert 'administrador activo' in resp.get_data(as_text=True)
+
+
+def test_restaurar_sin_fila_del_admin_actual_no_da_500(admin_client):
+    """El audit RESTORE corre después del commit de la restauración: leer
+    current_user (expirado; su fila ya no existe en la DB restaurada) daba
+    ObjectDeletedError → 500 tras reemplazar todos los datos, y sin la
+    fila de auditoría."""
+    from app.models.audit_log import AuditLog
+
+    respaldo = crear_backup()
+    admin_actual = Usuario.query.filter_by(rol='admin').first()
+    for fila in respaldo['datos']['usuarios']:
+        if fila['id'] == admin_actual.id:
+            fila['id'] = 7777  # tras restaurar, el admin logueado ya no existe
+
+    preview = _analizar(admin_client, respaldo)
+    token = _token(preview.get_data(as_text=True))
+    # Sin follow_redirects: en producción el request siguiente recarga el
+    # usuario desde la sesión (no encontrado → login); en la suite el
+    # app context largo mantiene el objeto y ensuciaría el assert.
+    resp = admin_client.post('/backup/restaurar', data={'token': token})
+    assert resp.status_code == 302, 'la restauración fue exitosa: no debe 500'
+    assert Usuario.query.filter_by(id=7777).count() == 1, 'restauró los datos'
+    assert AuditLog.query.filter_by(accion='RESTORE').count() == 1
+
+
+def test_revive_boolean_estricto():
+    """'false' (string) era True: un respaldo editado podía reactivar filas
+    en silencio. Solo se aceptan bool o 0/1."""
+    from sqlalchemy import Boolean, Column
+    from app.services.backup import ErrorRespaldo, _revive
+    col = Column('activo', Boolean())
+    assert _revive(col, True) is True
+    assert _revive(col, 0) is False
+    assert _revive(col, 1) is True
+    with pytest.raises(ErrorRespaldo):
+        _revive(col, 'false')
+    with pytest.raises(ErrorRespaldo):
+        _revive(col, 'x')

@@ -15,11 +15,12 @@ SUBTITULO_MAX = 80
 IMAGEN_MAX_BYTES = 512 * 1024  # 512 KB por imagen
 
 # Extensión del archivo → MIME con el que se sirve la imagen.
+# Sin SVG: los bytes se guardan tal cual y se sirven inline → un <script>
+# en el SVG ejecuta en la app (XSS same-origin en /marca/logo).
 MIME_POR_EXTENSION = {
     'png': 'image/png',
     'jpg': 'image/jpeg',
     'jpeg': 'image/jpeg',
-    'svg': 'image/svg+xml',
     'webp': 'image/webp',
 }
 EXTENSIONES_PERMITIDAS = tuple(MIME_POR_EXTENSION)

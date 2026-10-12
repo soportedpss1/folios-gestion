@@ -104,3 +104,15 @@ def test_main_password_corta(patched_cli, capsys):
     assert 'inválida' in capsys.readouterr().err
     user = Usuario.query.filter_by(username='maria').one()
     assert user.check_password('pass12345')
+
+
+def test_find_user_ambiguo_rechazado(app, operador, admin):
+    """Username sin validar podía ser un email: si coincide con el email de
+    OTRO usuario, el reset silenciosamente iba a la cuenta equivocada."""
+    import pytest
+    operador.username = 'jose@salud.gob.cu'   # username de A ...
+    admin.email = 'jose@salud.gob.cu'         # ... email de B
+    db.session.commit()
+
+    with pytest.raises(ValueError):
+        rp.find_user('jose@salud.gob.cu')

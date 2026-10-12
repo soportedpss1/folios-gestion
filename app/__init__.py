@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime
-from flask import Flask, jsonify
+from flask import Flask, current_app, jsonify
 from flask_wtf.csrf import CSRFError
 from app.config import Config, apply_runtime_env
 from app.extensions import db, login_manager, migrate, csrf, limiter
@@ -68,6 +68,19 @@ def create_app(config_class=None):
             'app_version': app.config['APP_VERSION'],
         }
 
+    @app.template_global()
+    def pagina_url(pagina):
+        """URL de la página `pagina` conservando el resto de query params.
+
+        El template hacía replace sobre el query string crudo: con
+        per_page=10&page=1, buscar 'page=1' también matcheaba dentro de
+        per_page y el siguiente link salía con 'per_0' (per_page perdido).
+        """
+        from flask import request, url_for
+        args = request.args.to_dict()
+        args['page'] = pagina
+        return url_for(request.endpoint, **(request.view_args or {}), **args)
+
     @app.errorhandler(404)
     def not_found(e):
         if request_wants_json():
@@ -115,11 +128,18 @@ def create_app(config_class=None):
 
     @app.errorhandler(413)
     def payload_too_large(e):
+        # El límite es configurable (MAX_CONTENT_LENGTH); un valor fijo en el
+        # mensaje confundía al usuario ("suba de 5 MB" cuando el cap era 32).
+        limite = current_app.config.get('MAX_CONTENT_LENGTH') or 0
+        if limite >= 1024 * 1024:
+            tam = f'{limite // (1024 * 1024)} MB'
+        else:
+            tam = f'{max(limite // 1024, 1)} KB'
         if request_wants_json():
             return jsonify(error='Archivo demasiado grande'), 413
         return render_error(
             '413', 'Archivo demasiado grande',
-            'El archivo supera el tamaño máximo permitido (5 MB).'
+            f'El archivo supera el tamaño máximo permitido ({tam}).'
         ), 413
 
     @app.errorhandler(500)
@@ -196,26 +216,37 @@ def request_wants_json():
 
 
 def render_error(code, title, message):
+    """Página de error inline.
+
+    Los datos (marca de la DB incluida) se pasan como VARIABLES de template,
+    nunca interpolados al fuente: hacerlo con f-string convierte cualquier
+    `{{ ... }}` de la marca en Jinja vivo (SSTI/RCE) y un `{{` mal cerrado
+    rompería esta plantilla dentro del propio manejador de errores.
+    """
     from flask import render_template_string
     from app.models.marca import marca_template_dict
     marca = marca_template_dict()
     marca_titulo = marca.get('sufijo') or marca.get('nombre') or 'Gestión de Folios'
-    return render_template_string(f'''
+    plantilla = '''
     <!DOCTYPE html>
     <html lang="es">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>{title} - {marca_titulo}</title>
+        <title>{{ title }} - {{ marca_titulo }}</title>
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
     </head>
     <body class="bg-light d-flex align-items-center justify-content-center" style="min-height:100vh;">
         <div class="text-center">
-            <h1 class="display-1 fw-bold text-primary">{code}</h1>
-            <h3 class="mb-3">{title}</h3>
-            <p class="text-muted mb-4">{message}</p>
+            <h1 class="display-1 fw-bold text-primary">{{ code }}</h1>
+            <h3 class="mb-3">{{ title }}</h3>
+            <p class="text-muted mb-4">{{ message }}</p>
             <a href="/" class="btn btn-primary">Volver al Inicio</a>
         </div>
     </body>
     </html>
-    ''')
+    '''
+    return render_template_string(
+        plantilla, title=title, code=code, message=message,
+        marca_titulo=marca_titulo,
+    )

@@ -136,3 +136,30 @@ def test_headers_incorrectos_rechazados(admin_client):
     text = resp.get_data(as_text=True)
     assert 'Encabezados incorrectos' in text
     assert RecepcionFolio.query.count() == 0
+
+
+def test_confirm_rango_invertido_rechazado(admin_client, tipo):
+    """folioFinal < folioInicial: el JSON del hidden es editable; sin esta
+    validación se crea un rango "10-5" con -4 folios que además envenena
+    detectar_solape y bloquea rangos válidos futuros."""
+    payload = json.dumps([{
+        'fecha': '2026-10-01', 'anioCert': 2026, 'tipoCert_id': tipo.id,
+        'folioInicial': 10, 'folioFinal': 5,
+    }])
+    resp = admin_client.post('/recepcion/importar/confirmar',
+                            data={'payload': payload}, follow_redirects=True)
+    assert 'inválidos' in resp.get_data(as_text=True)
+    assert RecepcionFolio.query.count() == 0, 'rango invertido no debe crearse'
+    assert Folio.query.count() == 0
+
+
+def test_confirm_valor_fuera_de_int_rechazado(admin_client, tipo):
+    """INT max = 2147483647; más allá MariaDB strict da DataError (500)."""
+    payload = json.dumps([{
+        'fecha': '2026-10-01', 'anioCert': 2026, 'tipoCert_id': tipo.id,
+        'folioInicial': 9999999999, 'folioFinal': 9999999999,
+    }])
+    resp = admin_client.post('/recepcion/importar/confirmar',
+                            data={'payload': payload}, follow_redirects=True)
+    assert resp.status_code == 200, 'no debe haber 500 por overflow de INT'
+    assert RecepcionFolio.query.count() == 0

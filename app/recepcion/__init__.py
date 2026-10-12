@@ -15,9 +15,10 @@ from app.models.tipo_certificado import TipoCertificado
 from app.models.usuario import Usuario
 from app.models.entrega_folio import EntregaFolio
 from app.models.devolucion_folio import DevolucionFolio
+from app.models.folio_comentario import FolioComentario
 from app.recepcion.forms import (
     EditarRecepcionForm, ImportarRecepcionForm, RecepcionForm,
-    detectar_solape, MAX_FOLIOS_POR_RECEPCION,
+    detectar_solape, MAX_FOLIOS_POR_RECEPCION, FOLIO_MAX,
 )
 from app.services import import_excel
 from app.services.audit import log_audit
@@ -66,7 +67,11 @@ def registrar_rango(*, fecha, anioCert, tipoCert_id, folioInicial, folioFinal,
     """
     new_rango_id = _next_rango_id()
 
-    solape = detectar_solape(anioCert, tipoCert_id, folioInicial, folioFinal)
+    # Lectura de bloqueo: es EL rechequeo que cubre los dos POSTs
+    # concurrentes, así que debe ver el último commit ajeno, no el snapshot
+    # previo al lock (ver detectar_solape(bloquear=True)).
+    solape = detectar_solape(anioCert, tipoCert_id, folioInicial, folioFinal,
+                             bloquear=True)
     if solape:
         db.session.rollback()
         raise SolapeError(msg_solape(folioInicial, folioFinal,
@@ -112,7 +117,11 @@ def index():
     pagination = RecepcionFolio.query.options(
         selectinload(RecepcionFolio.tipo_cert),
         selectinload(RecepcionFolio.usuario),
-    ).order_by(RecepcionFolio.created_at.desc()).paginate(page=page, per_page=25, error_out=False)
+    ).order_by(RecepcionFolio.created_at.desc(),
+               # created_at es DATETIME(0): un import masivo deja muchos con
+               # el mismo segundo y sin desempate las páginas se solapan
+               # (mismo fix que en folios/index).
+               RecepcionFolio.id.desc()).paginate(page=page, per_page=25, error_out=False)
     return render_template('recepcion/index.html', recepciones=pagination.items, pagination=pagination)
 
 
@@ -289,8 +298,10 @@ def create():
 def _folios_usados(folios):
     """Subconjunto de `folios` que no se pueden borrar ni reescribir.
 
-    Con entrega/devolución registrada, escaneado o estado != 'disponible':
-    el estado y los registros mandan, no solo la existencia de entrega.
+    Con entrega/devolución registrada, escaneado, comentario o estado !=
+    'disponible': el estado y los registros mandan, no solo la existencia
+    de entrega. `folio_comentarios` tiene FK sin ON DELETE → borrar el
+    folio daría IntegrityError (errno 1451 en MariaDB).
     """
     ids = [f.id for f in folios]
     if not ids:
@@ -299,6 +310,8 @@ def _folios_usados(folios):
                     EntregaFolio.query.filter(EntregaFolio.folio_id.in_(ids)).all()}
     con_registro |= {r.folio_id for r in
                      DevolucionFolio.query.filter(DevolucionFolio.folio_id.in_(ids)).all()}
+    con_registro |= {r.folio_id for r in
+                     FolioComentario.query.filter(FolioComentario.folio_id.in_(ids)).all()}
     return [f for f in folios
             if f.estado != 'disponible' or f.escaneado or f.id in con_registro]
 
@@ -446,7 +459,8 @@ def _validar_filas_recepcion(filas, usuario_default):
             error = 'Año fuera de rango (2000-2100).'
         elif tipo_id is None:
             error = f'Tipo de certificado desconocido: {nombre or "vacío"}.'
-        elif ini is None or fin is None or ini < 1 or fin < 1:
+        elif ini is None or fin is None or ini < 1 or fin < 1 \
+                or ini > FOLIO_MAX or fin > FOLIO_MAX:
             error = 'Número de folio inválido.'
         elif fin < ini:
             error = 'El folio final debe ser mayor o igual al inicial.'
@@ -519,7 +533,11 @@ def _payload_recepcion(raw):
                 return None
         fila['usuario_id'] = uid
         total = fila['folioFinal'] - fila['folioInicial'] + 1
-        if fila['folioInicial'] < 1 or not 2000 <= fila['anioCert'] <= 2100 \
+        # El hidden es editable: rango invertido crearía "-4 folios" y
+        # envenenaría detectar_solape; > FOLIO_MAX → DataError en MariaDB.
+        if fila['folioInicial'] < 1 or fila['folioFinal'] > FOLIO_MAX \
+                or fila['folioFinal'] < fila['folioInicial'] \
+                or not 2000 <= fila['anioCert'] <= 2100 \
                 or total > MAX_FOLIOS_POR_RECEPCION:
             return None
         limpio.append(fila)

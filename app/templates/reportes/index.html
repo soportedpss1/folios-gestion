@@ -23,9 +23,13 @@
             <div class="col-md-3">
                 <label class="form-label small fw-semibold">Año</label>
                 <select name="anioCert" class="form-select form-select-sm">
-                    {% for y in range(2025, 2031) %}
+                    <option value="">Todos</option>
+                    {% for y in range(anio_actual - 5, anio_actual + 2) %}
                         <option value="{{ y }}" {% if current_anio == y %}selected{% endif %}>{{ y }}</option>
                     {% endfor %}
+                    {% if current_anio and current_anio not in range(anio_actual - 5, anio_actual + 2) %}
+                        <option value="{{ current_anio }}" selected>{{ current_anio }}</option>
+                    {% endif %}
                 </select>
             </div>
             <div class="col-md-4">
