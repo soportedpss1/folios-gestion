@@ -1,4 +1,5 @@
 import json
+from datetime import date
 
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
@@ -20,7 +21,8 @@ from app.decorators import permiso_requerido
 
 entregas_bp = Blueprint('entregas', __name__, url_prefix='/entregas')
 
-HEADERS_FOLIOS = ['folio', 'tipoCert', 'anioCert', import_excel.COLUMNA_USUARIO]
+HEADERS_FOLIOS = ['folio', 'tipoCert', 'anioCert', 'fecha',
+                  import_excel.COLUMNA_USUARIO]
 MAX_PREVIA_MOSTRAR = 200
 
 
@@ -122,7 +124,7 @@ def plantilla():
     tipo = TipoCertificado.query.filter_by(activo=True) \
         .order_by(TipoCertificado.name).first()
     ejemplo = [1000, tipo.name if tipo else 'Tipo de certificado', 2026,
-               current_user.username]
+               date.today().strftime('%d/%m/%Y'), current_user.username]
     return import_excel.respuesta_plantilla(
         'plantilla_entregas.xlsx', HEADERS_FOLIOS, ejemplo)
 
@@ -158,7 +160,6 @@ def importar():
             payload_json=json.dumps(payload), total_validas=total_validos,
             max_mostrar=MAX_PREVIA_MOSTRAR,
             centro_nombre=centro.name if centro else '',
-            fecha_valor=form.fechaEntrega.data,
         )
     return render_template('entregas/importar.html', form=form)
 
@@ -168,9 +169,8 @@ def importar():
 @permiso_requerido('entregas.importar')
 def importar_confirmar():
 
-    items, centro_id, fecha, error = import_excel.parsear_confirmacion(
-        request.form.get('payload'), request.form.get('centroId'),
-        request.form.get('fecha'))
+    items, centro_id, error = import_excel.parsear_confirmacion(
+        request.form.get('payload'), request.form.get('centroId'))
     if error:
         flash(error, 'danger')
         return redirect(url_for('entregas.importar'))
@@ -182,24 +182,28 @@ def importar_confirmar():
 
     # Revalida contra la DB: el estado pudo cambiar desde la vista previa.
     # choices_folios_entrega solo devuelve los que siguen disponibles.
-    ids_validos = [fid for fid, _ in mov.choices_folios_entrega(
-        [fid for fid, _ in items])]
+    # Duplicado en el payload: gana la última fila (igual que antes).
+    mapa = {}
+    for fid, uid, fecha in items:
+        mapa[fid] = (uid, fecha)
+    ids_validos = [fid for fid, _ in mov.choices_folios_entrega(list(mapa))]
     if not ids_validos:
         flash('Ningún folio sigue disponible para entrega.', 'warning')
         return redirect(url_for('entregas.importar'))
 
-    # Atribución por folio (la columna usuario del Excel manda): un
-    # crear_movimiento por responsable. uid inválido/inexistente → fallback
-    # al actor (usuario_activo); audit siempre queda en el actor.
-    mapa_uid = dict(items)
+    # Atribución y fecha por folio (la columna usuario del Excel manda): un
+    # crear_movimiento por (responsable, fecha) — fechas distintas en un mismo
+    # archivo respetan su fila. uid inválido/inexistente → fallback al actor
+    # (usuario_activo); audit siempre queda en el actor.
     grupos = {}
     for fid in ids_validos:
-        grupos.setdefault(mapa_uid.get(fid), []).append(fid)
+        uid, fecha = mapa[fid]
+        grupos.setdefault((uid, fecha), []).append(fid)
 
     try:
         count = 0
         omitidos = 0
-        for uid, fids in grupos.items():
+        for (uid, fecha), fids in grupos.items():
             parcial, omitidos_parcial = mov.crear_movimiento(
                 modelo=EntregaFolio,
                 fecha_field='fechaEntrega',

@@ -27,8 +27,9 @@
                     opcionalmente <code>usuario</code> (username del responsable; si se
                     omite o la celda está vacía, el registro queda a nombre de quien
                     importa). Una fila por folio (máx. 5000 filas). Solo se aceptan
-                    folios que ese centro tenga entregados; el centro y la fecha se
-                    toman de este formulario.
+                    folios que ese centro tenga entregados; el centro se toma de
+                    este formulario y la fecha va por fila en el archivo (columna
+                    obligatoria <code>fecha</code>, formato dd/mm/aaaa).
                 </p>
                 <form method="POST" enctype="multipart/form-data">
                     {{ form.hidden_tag() }}
@@ -37,13 +38,6 @@
                             <label class="form-label fw-semibold">{{ form.centroId.label.text }}</label>
                             {{ form.centroId(class="form-select") }}
                             {% for error in form.centroId.errors %}
-                                <div class="text-danger small mt-1" role="alert">{{ error }}</div>
-                            {% endfor %}
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label fw-semibold">{{ form.fechaDevolucion.label.text }}</label>
-                            {{ form.fechaDevolucion(class="form-control") }}
-                            {% for error in form.fechaDevolucion.errors %}
                                 <div class="text-danger small mt-1" role="alert">{{ error }}</div>
                             {% endfor %}
                         </div>
@@ -68,7 +62,7 @@
                 <div class="alert {% if total_validas %}alert-info{% else %}alert-danger{% endif %} mb-3">
                     <i class="fas fa-list-check me-1"></i>
                     <strong>{{ total_validas }}</strong> folio(s) válido(s) de <strong>{{ preview|length }}</strong>
-                    para <strong>{{ centro_nombre }}</strong> con fecha <strong>{{ fecha_valor.strftime('%d/%m/%Y') if fecha_valor else '?' }}</strong>.
+                    para <strong>{{ centro_nombre }}</strong>.
                     {% set responsables = preview|selectattr('usuario')|map(attribute='usuario')|unique|list %}
                     {% if responsables %}
                     A nombre de <strong>{{ responsables[:3]|join(', ') }}{{ ' y más' if responsables|length > 3 else '' }}</strong>.
@@ -84,6 +78,7 @@
                             <tr>
                                 <th style="width:60px">#</th>
                                 <th>Folio</th>
+                                <th>Fecha</th>
                                 <th>Usuario</th>
                                 <th>Estado</th>
                             </tr>
@@ -93,6 +88,7 @@
                             <tr>
                                 <td>{{ p.n }}</td>
                                 <td class="col-folio">{{ p.etiqueta }}</td>
+                                <td>{{ p.fecha.strftime('%d/%m/%Y') if p.fecha else '—' }}</td>
                                 <td>
                                     {% if p.usuario %}
                                         <span class="badge bg-secondary">{{ p.usuario }}</span>
@@ -118,7 +114,6 @@
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="payload" value="{{ payload_json }}">
                     <input type="hidden" name="centroId" value="{{ form.centroId.data }}">
-                    <input type="hidden" name="fecha" value="{{ fecha_valor.isoformat() if fecha_valor else '' }}">
                     <div class="d-flex justify-content-end gap-2">
                         <a href="{{ url_for('devoluciones.importar') }}" class="btn btn-outline-secondary">Cancelar</a>
                         <button type="submit" class="btn btn-success">

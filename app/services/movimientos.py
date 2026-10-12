@@ -14,7 +14,7 @@ from app.models.centro import Centro
 from app.models.entrega_folio import EntregaFolio
 from app.models.folio import Folio
 from app.models.tipo_certificado import TipoCertificado
-from app.services.import_excel import COLUMNA_USUARIO, a_entero
+from app.services.import_excel import COLUMNA_USUARIO, a_entero, a_fecha
 from app.services.queries import resolver_usuario_nombre
 
 
@@ -117,16 +117,18 @@ def folios_entregados_a(centro_id, tipo_id=None):
 
 def resolver_folios_para_importar(filas, *, estado, excluir_nulos=False,
                                   centro_id=None, usuario_default=None):
-    """Resuelve filas {folio, tipoCert, anioCert, usuario} de un .xlsx contra la DB.
+    """Resuelve filas {folio, tipoCert, anioCert, fecha, usuario} de un .xlsx.
 
     Compartido por importar de entregas y devoluciones. Devuelve
     (preview, payload): preview tiene una entrada por fila con 'error' en
-    español o None y el responsable ('usuario'); payload es la lista de
-    {'id': folio_id, 'usuarioId': uid} de las filas válidas — la columna
-    `usuario` manda por fila: vacía o ausente → `usuario_default`; desconocida
-    o inactiva → la fila queda inválida. Para devoluciones pasar centro_id:
-    solo pasa el folio si ese centro lo tiene entregado. El folio no es único
-    solo por número: se busca por (anioCert, tipoCert_id, folio).
+    español o None, la fecha y el responsable ('usuario'); payload es la
+    lista de {'id': folio_id, 'usuarioId': uid, 'fecha': iso} de las filas
+    válidas — la columna `fecha` es obligatoria por fila (formato
+    dd/mm/aaaa o aaaa-mm-dd, o celda de fecha de Excel) y `usuario` manda
+    por fila: vacía o ausente → `usuario_default`; desconocida o inactiva →
+    la fila queda inválida. Para devoluciones pasar centro_id: solo pasa el
+    folio si ese centro lo tiene entregado. El folio no es único solo por
+    número: se busca por (anioCert, tipoCert_id, folio).
     """
     tipos = {t.name.strip().lower(): t.id
              for t in TipoCertificado.query.filter_by(activo=True).all()}
@@ -138,6 +140,7 @@ def resolver_folios_para_importar(filas, *, estado, excluir_nulos=False,
         anio = a_entero(row.get('anioCert'))
         nombre = str(row.get('tipoCert') or '').strip()
         tipo_id = tipos.get(nombre.lower())
+        fecha = a_fecha(row.get('fecha'))
         etiqueta = f'Folio {num if num is not None else "?"} - {nombre or "?"} {anio or ""}'
         error = None
         usuario = None
@@ -147,12 +150,15 @@ def resolver_folios_para_importar(filas, *, estado, excluir_nulos=False,
             error = 'Año fuera de rango (2000-2100).'
         elif tipo_id is None:
             error = f'Tipo de certificado desconocido: {nombre or "vacío"}.'
+        elif fecha is None:
+            error = 'Fecha inválida (use dd/mm/aaaa).'
         if error is None:
             usuario, error = resolver_usuario_nombre(
                 row.get(COLUMNA_USUARIO), usuario_default)
         preview.append({
             'n': n,
             'etiqueta': etiqueta,
+            'fecha': fecha,
             'usuario': usuario.username if usuario else None,
             'usuario_id': usuario.id if usuario else None,
             'error': error,
@@ -199,7 +205,8 @@ def resolver_folios_para_importar(filas, *, estado, excluir_nulos=False,
                 continue
             preview[idx]['id'] = folio.id
 
-    payload = [{'id': p['id'], 'usuarioId': p['usuario_id']}
+    payload = [{'id': p['id'], 'usuarioId': p['usuario_id'],
+                'fecha': p['fecha'].isoformat()}
                for p in preview if 'id' in p]
     return preview, payload
 

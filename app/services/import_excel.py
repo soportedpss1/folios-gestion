@@ -107,44 +107,43 @@ def a_fecha(valor):
     return None
 
 
-def parsear_confirmacion(payload_raw, centro_raw, fecha_raw):
-    """Hidden inputs del confirm → (items, centro_id, fecha, error).
+def parsear_confirmacion(payload_raw, centro_raw):
+    """Hidden inputs del confirm → (items, centro_id, error).
 
-    `items` es una lista de (folio_id, usuario_id|None): el payload de
-    entregas/devoluciones lleva el responsable por folio (atribución mixta
-    por fila). También se acepta la forma antigua de enteros sueltos
-    (usuario_id = None → usuario actual en el llamador). Aquí se sanea porque
-    el hidden es editable; el estado de cada folio se reconsulta después, en
-    el llamador.
+    `items` es una lista de (folio_id, usuario_id|None, fecha): el payload de
+    entregas/devoluciones lleva responsable y fecha por fila (la fecha viene
+    del Excel, columna obligatoria `fecha`; ya no hay campo de fecha en el
+    formulario). Aquí se sanea porque el hidden es editable; el estado de cada
+    folio se reconsulta después, en el llamador.
     """
+    invalido = 'Datos de importación inválidos. Repita la operación.'
     try:
         datos = json.loads(payload_raw or '')
     except (TypeError, ValueError):
-        return None, None, None, 'Datos de importación inválidos. Repita la operación.'
+        return None, None, invalido
     if not isinstance(datos, list) or not datos \
             or len(datos) > MAX_FOLIOS_POR_ARCHIVO:
-        return None, None, None, 'Datos de importación inválidos. Repita la operación.'
+        return None, None, invalido
 
     items = []
     for dato in datos:
-        if isinstance(dato, dict):
-            fid, uid = dato.get('id'), dato.get('usuarioId')
-        elif isinstance(dato, int) and not isinstance(dato, bool):
-            fid, uid = dato, None
-        else:
-            return None, None, None, 'Datos de importación inválidos. Repita la operación.'
+        if not isinstance(dato, dict):
+            return None, None, invalido
+        fid, uid = dato.get('id'), dato.get('usuarioId')
         if not isinstance(fid, int) or isinstance(fid, bool) or fid <= 0:
-            return None, None, None, 'Datos de importación inválidos. Repita la operación.'
+            return None, None, invalido
         if uid is not None and (not isinstance(uid, int) or isinstance(uid, bool)
                                  or uid <= 0):
-            return None, None, None, 'Datos de importación inválidos. Repita la operación.'
-        items.append((fid, uid))
+            return None, None, invalido
+        fecha = a_fecha(dato.get('fecha'))
+        if fecha is None:
+            return None, None, invalido
+        items.append((fid, uid, fecha))
 
     centro_id = a_entero(centro_raw)
-    fecha = a_fecha(fecha_raw)
-    if centro_id is None or fecha is None:
-        return None, None, None, 'Indique un centro de salud y una fecha válidos.'
-    return items, centro_id, fecha, None
+    if centro_id is None:
+        return None, None, 'Indique un centro de salud válido.'
+    return items, centro_id, None
 
 
 def respuesta_plantilla(nombre_archivo, headers, fila_ejemplo):

@@ -36,9 +36,6 @@ class ImportarDevolucionForm(FlaskForm):
         FileRequired(message='Seleccione un archivo.'),
         FileAllowed(['xlsx'], message='El archivo debe ser un Excel (.xlsx).'),
     ])
-    fechaDevolucion = DateField('Fecha de Devolución', validators=[
-        DataRequired(message='Seleccione una fecha.'),
-    ], default=date.today)
     centroId = SelectField('Centro de Salud', coerce=coerce_id_opcional,
                            validators=[DataRequired(message='Seleccione el centro de salud.')])
     submit = SubmitField('Validar archivo')

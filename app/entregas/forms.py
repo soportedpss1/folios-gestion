@@ -35,9 +35,6 @@ class ImportarEntregaForm(FlaskForm):
         FileRequired(message='Seleccione un archivo.'),
         FileAllowed(['xlsx'], message='El archivo debe ser un Excel (.xlsx).'),
     ])
-    fechaEntrega = DateField('Fecha de Entrega', validators=[
-        DataRequired(message='Seleccione una fecha.'),
-    ])
     centroId = SelectField('Centro de Salud', coerce=coerce_id_opcional,
                            validators=[DataRequired(message='Seleccione el centro de salud.')])
     submit = SubmitField('Validar archivo')
