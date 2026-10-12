@@ -51,13 +51,22 @@ def create_app(config_class=None):
     from app.services.permisos import puede
     app.jinja_env.globals['puede'] = puede
 
+    # Versión: el archivo VERSION de la raíz (única fuente; coincide con el
+    # tag de Docker Hub publicado).
+    from app.version import leer_version
+    app.config['APP_VERSION'] = leer_version()
+
     # Marca: nombre/subtítulo/logo/favicon (config singleton, fallback si la DB falla).
     from app.models.marca import marca_template_dict
 
     @app.context_processor
     def inject_globals():
         """Variables globales de plantilla (años del filtro de folios, marca)."""
-        return {'anio_actual': datetime.now().year, 'marca': marca_template_dict()}
+        return {
+            'anio_actual': datetime.now().year,
+            'marca': marca_template_dict(),
+            'app_version': app.config['APP_VERSION'],
+        }
 
     @app.errorhandler(404)
     def not_found(e):
