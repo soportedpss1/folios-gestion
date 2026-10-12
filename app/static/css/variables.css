@@ -19,6 +19,11 @@
     --sidebar-text: #CBD5E1;    /* slate-300: contraste 9.7:1 sobre sidebar-bg */
     --sidebar-text-dim: #94A3B8;/* slate-400: 5.9:1 sobre sidebar-bg */
     --sidebar-width: 260px;
+
+    /* Scrollbars estilizadas (thumb = píldora sobre fondos oscuros/tablas) */
+    --scrollbar-thumb: #64748B;        /* slate-500 */
+    --scrollbar-thumb-hover: #94A3B8;  /* slate-400 */
+    --scrollbar-track: transparent;
     --sidebar-collapsed-width: 0px;
     --navbar-height: 56px;
     --card-shadow: 0 0.125rem 0.25rem rgba(15, 23, 42, 0.075);
@@ -78,6 +83,10 @@
     --sidebar-bg: #0B1220;
     --sidebar-text: #E2E8F0;
     --sidebar-text-dim: #94A3B8;
+
+    /* Sobre el sidebar más oscuro, thumb un tono más discreto */
+    --scrollbar-thumb: #475569;        /* slate-600 */
+    --scrollbar-thumb-hover: #94A3B8;  /* slate-400 */
 
     --bs-body-bg: #0F172A;
     --bs-body-color: #E2E8F0;
