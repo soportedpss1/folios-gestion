@@ -230,6 +230,52 @@ def update_status():
     })
 
 
+# --- estado 'perdido' (marcaje reversible, solo desde el detalle) ---
+
+ESTADOS_MARCABLES_PERDIDO = ('disponible', 'entregado')
+
+
+def _destino_de_recuperacion(folio):
+    """Estado previo DERIVADO del registro de entrega: con EntregaFolio →
+    entregado; sin registro → disponible."""
+    return 'entregado' if folio.entrega is not None else 'disponible'
+
+
+def _cambiar_estado_perdido(folio, destino):
+    """Transición del estado del folio con auditoría (el llamador valida)."""
+    old = {'estado': folio.estado}
+    folio.estado = destino
+    log_audit(current_user.id, 'UPDATE', 'folios', folio.id, old,
+              {'estado': destino})
+
+
+@folios_bp.route('/<int:id>/perder', methods=['POST'])
+@permiso_requerido('folios.actualizar', hacia='blueprint')
+def perder(id):
+    folio = get_or_404(Folio, id)
+    if folio.estado not in ESTADOS_MARCABLES_PERDIDO:
+        flash('Solo se pueden marcar como perdidos folios disponibles '
+              'o entregados.', 'danger')
+        return redirect(url_for('folios.details', id=folio.id))
+    _cambiar_estado_perdido(folio, 'perdido')
+    db.session.commit()
+    flash('Folio marcado como perdido.', 'success')
+    return redirect(url_for('folios.details', id=folio.id))
+
+
+@folios_bp.route('/<int:id>/recuperar', methods=['POST'])
+@permiso_requerido('folios.actualizar', hacia='blueprint')
+def recuperar(id):
+    folio = get_or_404(Folio, id)
+    if folio.estado != 'perdido':
+        flash('Solo los folios perdidos se pueden recuperar.', 'danger')
+        return redirect(url_for('folios.details', id=folio.id))
+    _cambiar_estado_perdido(folio, _destino_de_recuperacion(folio))
+    db.session.commit()
+    flash('Folio recuperado.', 'success')
+    return redirect(url_for('folios.details', id=folio.id))
+
+
 def _preview_flag(filas, attr):
     """Filas del Excel → (preview, payload) para la bandera booleana `attr`.
 

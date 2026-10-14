@@ -7,9 +7,34 @@
     <h4 class="fw-bold mb-0">
         <i class="fas fa-file-alt me-2 text-primary"></i>Folio #{{ folio.folio }}
     </h4>
-    <a href="{{ url_for('folios.index') }}" class="btn btn-outline-secondary">
-        <i class="fas fa-arrow-left me-1"></i>Volver
-    </a>
+    <div class="d-flex gap-2">
+        {% if puede('folios.actualizar') %}
+            {% if folio.estado in ('disponible', 'entregado') %}
+            <form method="POST" action="{{ url_for('folios.perder', id=folio.id) }}"
+                  data-confirm data-title="¿Marcar este folio como perdido?"
+                  data-text="Dejará de estar {{ folio.estado }} hasta que se recupere."
+                  data-icon="danger" class="d-inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-outline-warning">
+                    <i class="fas fa-exclamation-triangle me-1" aria-hidden="true"></i>Marcar como perdido
+                </button>
+            </form>
+            {% elif folio.estado == 'perdido' %}
+            <form method="POST" action="{{ url_for('folios.recuperar', id=folio.id) }}"
+                  data-confirm data-title="¿Recuperar este folio?"
+                  data-text="Volverá al estado {% if folio.entrega %}entregado{% else %}disponible{% endif %}."
+                  data-icon="question" class="d-inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-outline-success">
+                    <i class="fas fa-undo me-1" aria-hidden="true"></i>Recuperar folio
+                </button>
+            </form>
+            {% endif %}
+        {% endif %}
+        <a href="{{ url_for('folios.index') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i>Volver
+        </a>
+    </div>
 </div>
 
 <div class="row g-4">
@@ -45,6 +70,8 @@
                                 <span class="badge bg-danger fs-6">Entregado</span>
                             {% elif folio.estado == 'devuelto' %}
                                 <span class="badge bg-success fs-6">Devuelto</span>
+                            {% elif folio.estado == 'perdido' %}
+                                <span class="badge bg-warning text-dark fs-6">Perdido</span>
                             {% endif %}
                         </td>
                     </tr>

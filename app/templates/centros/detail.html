@@ -178,6 +178,8 @@
                                         <span class="badge bg-danger">Entregado</span>
                                     {% elif folio.estado == 'devuelto' %}
                                         <span class="badge bg-success">Devuelto</span>
+                                    {% elif folio.estado == 'perdido' %}
+                                        <span class="badge bg-warning text-dark">Perdido</span>
                                     {% else %}
                                         <span class="badge bg-secondary">{{ folio.estado }}</span>
                                     {% endif %}

@@ -56,6 +56,7 @@
                     <option value="disponible" {% if current_estado == 'disponible' %}selected{% endif %}>Disponible</option>
                     <option value="entregado" {% if current_estado == 'entregado' %}selected{% endif %}>Entregado</option>
                     <option value="devuelto" {% if current_estado == 'devuelto' %}selected{% endif %}>Devuelto</option>
+                    <option value="perdido" {% if current_estado == 'perdido' %}selected{% endif %}>Perdido</option>
                     <option value="digitado" {% if current_estado == 'digitado' %}selected{% endif %}>Digitado</option>
                     <option value="escaneado" {% if current_estado == 'escaneado' %}selected{% endif %}>Escaneado</option>
                     <option value="nulo" {% if current_estado == 'nulo' %}selected{% endif %}>Nulo</option>
@@ -105,6 +106,8 @@
                                 <span class="badge bg-danger">Entregado</span>
                             {% elif f.estado == 'devuelto' %}
                                 <span class="badge bg-success">Devuelto</span>
+                            {% elif f.estado == 'perdido' %}
+                                <span class="badge bg-warning text-dark">Perdido</span>
                             {% endif %}
                         </td>
                         <td>
