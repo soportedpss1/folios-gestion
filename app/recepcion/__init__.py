@@ -429,16 +429,16 @@ def delete(id):
     return redirect(url_for('recepcion.index'))
 
 
-def _validar_filas_recepcion(filas, usuario_default):
+def _validar_filas_recepcion(filas):
     """Valida cada fila del archivo contra la DB y entre sí.
 
     Devuelve (preview, payload): preview con una entrada por fila (etiqueta,
     responsable y error en español o None); payload solo con las filas válidas,
     saneado para el hidden de confirmación, con `usuario_id` por fila. La
-    columna `usuario` manda: vacía o ausente → `usuario_default`; desconocida
-    o inactiva → la fila queda inválida. Las filas también se cruzan entre sí
-    porque dos rangos del mismo archivo pueden solaparse sin existir en la DB
-    todavía.
+    columna `usuario` es OBLIGATORIA: celda vacía → 'Usuario vacío.';
+    desconocida o inactiva → la fila queda inválida. Las filas también se
+    cruzan entre sí porque dos rangos del mismo archivo pueden solaparse sin
+    existir en la DB todavía.
     """
     tipos = {t.name.strip().lower(): t.id
              for t in TipoCertificado.query.filter_by(activo=True).all()}
@@ -468,7 +468,7 @@ def _validar_filas_recepcion(filas, usuario_default):
             error = f'El rango supera el máximo de {MAX_FOLIOS_POR_RECEPCION} folios.'
         if error is None:
             usuario, error = resolver_usuario_nombre(
-                row.get(import_excel.COLUMNA_USUARIO), usuario_default)
+                row.get(import_excel.COLUMNA_USUARIO))
         if error is None:
             solape = detectar_solape(anio, tipo_id, ini, fin)
             if solape:
@@ -564,13 +564,12 @@ def importar():
     if form.validate_on_submit():
         try:
             filas = import_excel.leer_filas(
-                form.archivo.data, HEADERS_RECEPCION, MAX_RANGOS_POR_ARCHIVO,
-                opcionales=(import_excel.COLUMNA_USUARIO,))
+                form.archivo.data, HEADERS_RECEPCION, MAX_RANGOS_POR_ARCHIVO)
         except import_excel.ImportExcelError as e:
             flash(str(e), 'danger')
             return render_template('recepcion/importar.html', form=form)
 
-        preview, payload = _validar_filas_recepcion(filas, current_user)
+        preview, payload = _validar_filas_recepcion(filas)
         total_validas = sum(1 for p in preview if p['error'] is None)
         if not total_validas:
             flash('Ninguna fila del archivo es válida.', 'danger')

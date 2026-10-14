@@ -20,7 +20,7 @@ from app.decorators import permiso_requerido
 
 devoluciones_bp = Blueprint('devoluciones', __name__, url_prefix='/devoluciones')
 
-HEADERS_FOLIOS = ['folio', 'tipoCert', 'anioCert', 'fecha',
+HEADERS_FOLIOS = ['folio', 'tipoCert', 'anioCert', 'fecha', 'centro',
                   import_excel.COLUMNA_USUARIO]
 MAX_PREVIA_MOSTRAR = 200
 
@@ -153,8 +153,11 @@ def folios_por_centro(centro_id):
 def plantilla():
     tipo = TipoCertificado.query.filter_by(activo=True) \
         .order_by(TipoCertificado.name).first()
+    centro = Centro.query.filter_by(activo=True).order_by(Centro.name).first()
     ejemplo = [1000, tipo.name if tipo else 'Tipo de certificado', 2026,
-               date.today().strftime('%d/%m/%Y'), current_user.username]
+               date.today().strftime('%d/%m/%Y'),
+               centro.name if centro else 'Nombre del centro',
+               current_user.username]
     return import_excel.respuesta_plantilla(
         'plantilla_devoluciones.xlsx', HEADERS_FOLIOS, ejemplo)
 
@@ -165,31 +168,28 @@ def plantilla():
 def importar():
 
     form = ImportarDevolucionForm()
-    form.centroId.choices = mov.choices_centros(
-        None, placeholder='Seleccione el centro de salud')
 
     if form.validate_on_submit():
         try:
             filas = import_excel.leer_filas(
                 form.archivo.data, HEADERS_FOLIOS,
-                import_excel.MAX_FOLIOS_POR_ARCHIVO,
-                opcionales=(import_excel.COLUMNA_USUARIO,))
+                import_excel.MAX_FOLIOS_POR_ARCHIVO)
         except import_excel.ImportExcelError as e:
             flash(str(e), 'danger')
             return render_template('devoluciones/importar.html', form=form)
 
         preview, payload = mov.resolver_folios_para_importar(
-            filas, estado='entregado', centro_id=form.centroId.data,
-            usuario_default=current_user)
+            filas, estado='entregado')
         total_validos = sum(1 for p in preview if p['error'] is None)
         if not total_validos:
-            flash('Ningún folio del archivo está entregado a ese centro.', 'danger')
-        centro = db.session.get(Centro, form.centroId.data)
+            flash('Ningún folio del archivo es válido para devolución.', 'danger')
+        centros_nombre = ', '.join(sorted(
+            {p['centro'] for p in preview if p['error'] is None and p['centro']}))
         return render_template(
             'devoluciones/importar.html', form=form, preview=preview,
             payload_json=json.dumps(payload), total_validas=total_validos,
             max_mostrar=MAX_PREVIA_MOSTRAR,
-            centro_nombre=centro.name if centro else '',
+            centros_nombre=centros_nombre,
         )
     return render_template('devoluciones/importar.html', form=form)
 
@@ -199,49 +199,51 @@ def importar():
 @permiso_requerido('devoluciones.importar')
 def importar_confirmar():
 
-    items, centro_id, error = import_excel.parsear_confirmacion(
-        request.form.get('payload'), request.form.get('centroId'))
+    items, error = import_excel.parsear_confirmacion(request.form.get('payload'))
     if error:
         flash(error, 'danger')
         return redirect(url_for('devoluciones.importar'))
 
-    centro = db.session.get(Centro, centro_id)
-    if centro is None or not centro.activo:
+    # El centro viene por fila en el payload (el hidden es editable):
+    # revalida cada centro contra la DB antes de cualquier registro.
+    cids = {cid for _, _, _, cid in items}
+    centros = {c.id: c for c in Centro.query.filter(Centro.id.in_(cids)).all()}
+    if any(cid not in centros or not centros[cid].activo for cid in cids):
         flash('Centro de salud inválido.', 'danger')
         return redirect(url_for('devoluciones.importar'))
 
-    # Revalida contra la DB: solo los folios que ese centro tenga entregados
-    # siguen siendo elegibles; el resto se descarta (pudo cambiar el estado
-    # desde la vista previa, y el hidden es editable). Duplicado en el
-    # payload: gana la última fila.
+    # Revalida contra la DB: solo los folios que el centro de su fila tenga
+    # entregados siguen siendo elegibles; el resto se descarta (pudo cambiar
+    # el estado desde la vista previa, y el hidden es editable). Duplicado en
+    # el payload: gana la última fila.
     mapa = {}
-    for fid, uid, fecha in items:
-        mapa[fid] = (uid, fecha)
-    ids_validos = [fid for fid, _ in mov.choices_folios_devolucion(
-        list(mapa), centro_id)]
+    for fid, uid, fecha, cid in items:
+        mapa[fid] = (uid, fecha, cid)
+    ids_validos = mov.folios_devolubles(
+        {fid: cid for fid, (uid, fecha, cid) in mapa.items()})
     if not ids_validos:
-        flash('Ningún folio sigue entregado a ese centro.', 'warning')
+        flash('Ningún folio sigue entregado a su centro.', 'warning')
         return redirect(url_for('devoluciones.importar'))
 
-    # Atribución y fecha por folio (la columna usuario del Excel manda): un
-    # crear_movimiento por (responsable, fecha) — fechas distintas en un mismo
-    # archivo respetan su fila. uid inválido/inexistente → fallback al actor
-    # (usuario_activo); audit siempre queda en el actor.
+    # Atribución, fecha y centro por folio (el Excel manda por fila): un
+    # crear_movimiento por (centro, responsable, fecha) — centros o fechas
+    # distintas en un mismo archivo respetan su fila. uid inválido/inexistente
+    # → fallback al actor (usuario_activo); audit siempre queda en el actor.
     grupos = {}
     for fid in ids_validos:
-        uid, fecha = mapa[fid]
-        grupos.setdefault((uid, fecha), []).append(fid)
+        uid, fecha, cid = mapa[fid]
+        grupos.setdefault((cid, uid, fecha), []).append(fid)
 
     try:
         count = 0
         omitidos = 0
-        for (uid, fecha), fids in grupos.items():
+        for (cid, uid, fecha), fids in grupos.items():
             parcial, omitidos_parcial = mov.crear_movimiento(
                 modelo=DevolucionFolio,
                 fecha_field='fechaDevolucion',
                 folio_ids=fids,
                 fecha=fecha,
-                centro_id=centro_id,
+                centro_id=cid,
                 user=usuario_activo(uid, current_user),
                 actor=current_user,
                 estado_origen='entregado',

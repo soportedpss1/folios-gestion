@@ -25,8 +25,8 @@ MAX_FOLIOS_POR_ARCHIVO = 5000
 # descomprimirse en gigas y tumbar al worker (OOM).
 MAX_XLSX_DECOMPRESION = 200 * 1024 * 1024
 
-# Columna final opcional de las plantillas: username del dueño de la fila.
-# Los archivos antiguos sin ella se siguen aceptando (fila = usuario actual).
+# Columna final de las plantillas: username del dueño de la fila.
+# Obligatoria en TODAS las importaciones (columna y celda por fila).
 COLUMNA_USUARIO = 'usuario'
 
 
@@ -49,14 +49,14 @@ def _validar_tamano_descomprimido(file_storage):
             f'El archivo ocupa demasiado al descomprimirse (máximo {mb} MB).')
 
 
-def leer_filas(file_storage, headers, max_filas, opcionales=()):
+def leer_filas(file_storage, headers, max_filas):
     """Devuelve las filas de datos como dicts con llave = encabezado.
 
-    `headers` es la lista completa (en orden) que debe tener la fila 1;
-    `opcionales` lista los encabezados finales que pueden faltar (p.ej.
-    `usuario` en los archivos antiguos). Lanza ImportExcelError si los
-    encabezados no coinciden, si la hoja no tiene datos o si supera `max_filas`
-    filas. Las filas totalmente vacías se ignoran.
+    `headers` es la lista completa (en orden) que debe tener la fila 1:
+    TODAS las columnas son obligatorias y no puede sobrar ninguna. Lanza
+    ImportExcelError si los encabezados no coinciden, si la hoja no tiene
+    datos o si supera `max_filas` filas. Las filas totalmente vacías se
+    ignoran.
     """
     try:
         _validar_tamano_descomprimido(file_storage)
@@ -69,21 +69,17 @@ def leer_filas(file_storage, headers, max_filas, opcionales=()):
     try:
         ws = wb.active
         esperados = [h.strip().lower() for h in headers]
-        requeridos = esperados[:len(esperados) - len(opcionales)]
         filas = []
         for i, row in enumerate(ws.iter_rows(values_only=True)):
             if i == 0:
                 actual = [('' if c is None else str(c).strip().lower()) for c in row]
                 while actual and actual[-1] == '':
                     actual.pop()
-                if actual not in (esperados, requeridos):
-                    msg = (
+                if actual != esperados:
+                    raise ImportExcelError(
                         'Encabezados incorrectos. Se esperaba exactamente: '
-                        + ', '.join(headers)
+                        + ', '.join(headers) + '.'
                     )
-                    if opcionales:
-                        msg += f' (la columna {", ".join(opcionales)} puede omitirse)'
-                    raise ImportExcelError(msg + '.')
                 continue
             if all(c is None or str(c).strip() == '' for c in row):
                 continue
@@ -131,43 +127,43 @@ def a_fecha(valor):
     return None
 
 
-def parsear_confirmacion(payload_raw, centro_raw):
-    """Hidden inputs del confirm → (items, centro_id, error).
+def parsear_confirmacion(payload_raw):
+    """Hidden input del confirm → (items, error).
 
-    `items` es una lista de (folio_id, usuario_id|None, fecha): el payload de
-    entregas/devoluciones lleva responsable y fecha por fila (la fecha viene
-    del Excel, columna obligatoria `fecha`; ya no hay campo de fecha en el
+    `items` es una lista de (folio_id, usuario_id|None, fecha, centro_id):
+    el payload de entregas/devoluciones lleva responsable, fecha y centro por
+    fila (la fecha viene del Excel, columna obligatoria `fecha`; el centro
+    también, columna obligatoria `centro` — ya no hay selects en el
     formulario). Aquí se sanea porque el hidden es editable; el estado de cada
-    folio se reconsulta después, en el llamador.
+    folio y el centro se reconsultan después, en el llamador.
     """
     invalido = 'Datos de importación inválidos. Repita la operación.'
     try:
         datos = json.loads(payload_raw or '')
     except (TypeError, ValueError):
-        return None, None, invalido
+        return None, invalido
     if not isinstance(datos, list) or not datos \
             or len(datos) > MAX_FOLIOS_POR_ARCHIVO:
-        return None, None, invalido
+        return None, invalido
 
     items = []
     for dato in datos:
         if not isinstance(dato, dict):
-            return None, None, invalido
+            return None, invalido
         fid, uid = dato.get('id'), dato.get('usuarioId')
         if not isinstance(fid, int) or isinstance(fid, bool) or fid <= 0:
-            return None, None, invalido
+            return None, invalido
         if uid is not None and (not isinstance(uid, int) or isinstance(uid, bool)
                                  or uid <= 0):
-            return None, None, invalido
+            return None, invalido
         fecha = a_fecha(dato.get('fecha'))
         if fecha is None:
-            return None, None, invalido
-        items.append((fid, uid, fecha))
-
-    centro_id = a_entero(centro_raw)
-    if centro_id is None:
-        return None, None, 'Indique un centro de salud válido.'
-    return items, centro_id, None
+            return None, invalido
+        centro_id = a_entero(dato.get('centroId'))
+        if centro_id is None or centro_id <= 0:
+            return None, invalido
+        items.append((fid, uid, fecha, centro_id))
+    return items, None
 
 
 def respuesta_plantilla(nombre_archivo, headers, fila_ejemplo):

@@ -27,20 +27,20 @@ def usuario_activo(raw, fallback):
     return usuario
 
 
-def resolver_usuario_nombre(nombre, fallback):
+def resolver_usuario_nombre(nombre):
     """Username de una celda Excel → (usuario, error).
 
-    Vacío → (fallback, None): la fila la reclama quien importa. Con valor se
-    busca por username sin distinguir mayúsculas; si no existe o está inactivo
-    → (None, 'Usuario desconocido: X.' / 'Usuario inactivo: X.') para que la
-    vista previa marque la fila inválida.
+    Obligatorio por fila: vacío → (None, 'Usuario vacío.'). Con valor se
+    busca por username sin distinguir mayúsculas; si no existe o está
+    inactivo → (None, 'Usuario desconocido: X.' / 'Usuario inactivo: X.')
+    para que la vista previa marque la fila inválida.
     """
     from sqlalchemy import func
 
     from app.models.usuario import Usuario
     texto = str(nombre or '').strip()
     if not texto:
-        return fallback, None
+        return None, 'Usuario vacío.'
     usuario = Usuario.query.filter(
         func.lower(Usuario.username) == texto.lower()
     ).first()

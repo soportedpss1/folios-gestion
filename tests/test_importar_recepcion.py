@@ -8,7 +8,8 @@ from openpyxl import Workbook, load_workbook
 from app.models.folio import Folio
 from app.models.recepcion_folio import RecepcionFolio
 
-HEADERS = ['fecha', 'anioCert', 'tipoCert', 'folioInicial', 'folioFinal']
+HEADERS = ['fecha', 'anioCert', 'tipoCert', 'folioInicial', 'folioFinal',
+           'usuario']
 
 
 def make_xlsx(headers, rows):
@@ -45,8 +46,8 @@ def test_plantilla_es_xlsx_con_headers(admin_client):
     assert resp.status_code == 200
     assert 'spreadsheetml' in resp.content_type
     wb = load_workbook(BytesIO(resp.data))
-    assert [c.value for c in wb.active[1]] == HEADERS + ['usuario'], \
-        'la plantilla trae la columna usuario final (opcional al importar)'
+    assert [c.value for c in wb.active[1]] == HEADERS, \
+        'la plantilla trae la columna usuario final (obligatoria al importar)'
 
 
 def test_importar_sin_permisos_redirige(client, app):
@@ -59,7 +60,8 @@ def test_importar_sin_permisos_redirige(client, app):
 
 
 def test_preview_muestra_fila_valida(admin_client, tipo):
-    resp = post_importar(admin_client, HEADERS, [['2026-10-01', 2026, tipo.name, 1, 5]])
+    resp = post_importar(admin_client, HEADERS,
+                         [['2026-10-01', 2026, tipo.name, 1, 5, 'adminuser']])
     assert resp.status_code == 200
     text = resp.get_data(as_text=True)
     assert '<strong>1</strong> fila(s) válida(s) de <strong>1</strong>' in text
@@ -73,7 +75,8 @@ def test_preview_marca_solape_contra_db(admin_client, tipo):
         'folioInicial': 100, 'folioFinal': 110,
     }, follow_redirects=True)
 
-    resp = post_importar(admin_client, HEADERS, [['2026-10-01', 2026, tipo.name, 105, 120]])
+    resp = post_importar(admin_client, HEADERS,
+                         [['2026-10-01', 2026, tipo.name, 105, 120, 'adminuser']])
     text = resp.get_data(as_text=True)
     assert '<strong>0</strong> fila(s) válida(s) de <strong>1</strong>' in text
     assert 'solapa' in text
@@ -81,8 +84,8 @@ def test_preview_marca_solape_contra_db(admin_client, tipo):
 
 def test_preview_marca_solape_entre_filas_del_archivo(admin_client, tipo):
     resp = post_importar(admin_client, HEADERS, [
-        ['2026-10-01', 2026, tipo.name, 1, 10],
-        ['2026-10-02', 2026, tipo.name, 5, 15],
+        ['2026-10-01', 2026, tipo.name, 1, 10, 'adminuser'],
+        ['2026-10-02', 2026, tipo.name, 5, 15, 'adminuser'],
     ])
     text = resp.get_data(as_text=True)
     assert '<strong>1</strong> fila(s) válida(s) de <strong>2</strong>' in text
@@ -135,6 +138,25 @@ def test_headers_incorrectos_rechazados(admin_client):
     resp = post_importar(admin_client, ['otra', 'columna'], [[1, 2]])
     text = resp.get_data(as_text=True)
     assert 'Encabezados incorrectos' in text
+    assert RecepcionFolio.query.count() == 0
+
+
+def test_archivo_sin_columna_usuario_rechazado(admin_client, tipo):
+    """Todas las columnas son obligatorias: sin `usuario` no hay importación."""
+    resp = post_importar(admin_client, HEADERS[:-1],
+                         [['2026-10-01', 2026, tipo.name, 1, 5]])
+    text = resp.get_data(as_text=True)
+    assert 'Encabezados incorrectos' in text
+    assert RecepcionFolio.query.count() == 0
+
+
+def test_celda_usuario_vacia_marca_fila(admin_client, tipo):
+    """La celda también es obligatoria: vacía → fila inválida."""
+    resp = post_importar(admin_client, HEADERS,
+                         [['2026-10-01', 2026, tipo.name, 1, 5, '']])
+    text = resp.get_data(as_text=True)
+    assert 'Usuario vacío.' in text
+    assert '<strong>0</strong> fila(s) válida(s) de <strong>1</strong>' in text
     assert RecepcionFolio.query.count() == 0
 
 

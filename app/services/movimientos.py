@@ -119,35 +119,43 @@ def folios_entregados_a(centro_id, tipo_id=None):
     return [{'id': f.id, 'texto': f'Folio {f.folio} - {f.tipo_cert.name}'} for f in folios]
 
 
-def resolver_folios_para_importar(filas, *, estado, excluir_nulos=False,
-                                  centro_id=None, usuario_default=None):
-    """Resuelve filas {folio, tipoCert, anioCert, fecha, usuario} de un .xlsx.
+def resolver_folios_para_importar(filas, *, estado, excluir_nulos=False):
+    """Resuelve filas {folio, tipoCert, anioCert, fecha, centro, usuario} de un .xlsx.
 
     Compartido por importar de entregas y devoluciones. Devuelve
     (preview, payload): preview tiene una entrada por fila con 'error' en
-    español o None, la fecha y el responsable ('usuario'); payload es la
-    lista de {'id': folio_id, 'usuarioId': uid, 'fecha': iso} de las filas
-    válidas — la columna `fecha` es obligatoria por fila (formato
-    dd/mm/aaaa o aaaa-mm-dd, o celda de fecha de Excel) y `usuario` manda
-    por fila: vacía o ausente → `usuario_default`; desconocida o inactiva →
-    la fila queda inválida. Para devoluciones pasar centro_id: solo pasa el
-    folio si ese centro lo tiene entregado. El folio no es único solo por
-    número: se busca por (anioCert, tipoCert_id, folio).
+    español o None, la fecha, el centro y el responsable ('usuario'); payload
+    es la lista de {'id': folio_id, 'usuarioId': uid, 'fecha': iso,
+    'centroId': cid} de las filas válidas — la columna `fecha` es obligatoria
+    por fila (formato dd/mm/aaaa o aaaa-mm-dd, o celda de fecha de Excel) y
+    `usuario` TAMBIÉN: celda vacía → 'Usuario vacío.'; desconocida o inactiva
+    → la fila queda inválida.
+
+    El centro TAMBIÉN viene por fila (columna obligatoria `centro`) y se
+    compara EXACTAMENTE con Centro.name: vacío, desconocido o inactivo deja
+    la fila inválida. Para devoluciones (estado='entregado') solo pasa el
+    folio si el centro de su fila lo tiene entregado. El folio no es único
+    solo por número: se busca por (anioCert, tipoCert_id, folio).
     """
     tipos = {t.name.strip().lower(): t.id
              for t in TipoCertificado.query.filter_by(activo=True).all()}
+    centros = {c.name: c for c in Centro.query.all()}
 
     preview = []
-    pendientes = []  # (índice en preview, folio, anio, tipo_id)
+    pendientes = []  # (índice en preview, folio, anio, tipo_id, centro_id)
     for n, row in enumerate(filas, 1):
         num = a_entero(row.get('folio'))
         anio = a_entero(row.get('anioCert'))
         nombre = str(row.get('tipoCert') or '').strip()
         tipo_id = tipos.get(nombre.lower())
         fecha = a_fecha(row.get('fecha'))
+        crudo = row.get('centro')
+        texto_centro = crudo if isinstance(crudo, str) else (
+            '' if crudo is None else str(crudo))
         etiqueta = f'Folio {num if num is not None else "?"} - {nombre or "?"} {anio or ""}'
         error = None
         usuario = None
+        centro_id = None
         if num is None or num < 1:
             error = 'Número de folio inválido.'
         elif anio is None or not 2000 <= anio <= 2100:
@@ -157,18 +165,31 @@ def resolver_folios_para_importar(filas, *, estado, excluir_nulos=False,
         elif fecha is None:
             error = 'Fecha inválida (use dd/mm/aaaa).'
         if error is None:
+            if not texto_centro.strip():
+                error = 'Centro de salud vacío.'
+            else:
+                centro = centros.get(texto_centro)
+                if centro is None:
+                    error = f'Centro de salud desconocido: {texto_centro}.'
+                elif not centro.activo:
+                    error = f'Centro de salud inactivo: {texto_centro}.'
+                else:
+                    centro_id = centro.id
+        if error is None:
             usuario, error = resolver_usuario_nombre(
-                row.get(COLUMNA_USUARIO), usuario_default)
+                row.get(COLUMNA_USUARIO))
         preview.append({
             'n': n,
             'etiqueta': etiqueta,
             'fecha': fecha,
+            'centro': texto_centro or None,
+            'centro_id': centro_id,
             'usuario': usuario.username if usuario else None,
             'usuario_id': usuario.id if usuario else None,
             'error': error,
         })
         if error is None:
-            pendientes.append((len(preview) - 1, num, anio, tipo_id))
+            pendientes.append((len(preview) - 1, num, anio, tipo_id, centro_id))
 
     if pendientes:
         encontrados = Folio.query.filter(
@@ -179,16 +200,16 @@ def resolver_folios_para_importar(filas, *, estado, excluir_nulos=False,
         mapa = {(f.anioCert, f.tipoCert_id, f.folio): f for f in encontrados}
 
         entregado_en = set()
-        if centro_id and encontrados:
+        if estado == 'entregado' and encontrados:
             entregado_en = {
-                e.folio_id for e in EntregaFolio.query.filter(
+                (e.folio_id, e.centroId) for e in EntregaFolio.query.filter(
                     EntregaFolio.folio_id.in_([f.id for f in encontrados]),
-                    EntregaFolio.centroId == centro_id,
+                    EntregaFolio.centroId.in_({p[4] for p in pendientes}),
                 ).all()
             }
 
         vistos = set()
-        for idx, num, anio, tipo_id in pendientes:
+        for idx, num, anio, tipo_id, centro_id in pendientes:
             folio = mapa.get((anio, tipo_id, num))
             if folio is None:
                 preview[idx]['error'] = 'El folio no existe.'
@@ -204,15 +225,35 @@ def resolver_folios_para_importar(filas, *, estado, excluir_nulos=False,
             if excluir_nulos and folio.nulo:
                 preview[idx]['error'] = 'El folio está marcado como nulo.'
                 continue
-            if centro_id and folio.id not in entregado_en:
+            if estado == 'entregado' and (folio.id, centro_id) not in entregado_en:
                 preview[idx]['error'] = 'Ese centro no lo tiene entregado.'
                 continue
             preview[idx]['id'] = folio.id
 
     payload = [{'id': p['id'], 'usuarioId': p['usuario_id'],
-                'fecha': p['fecha'].isoformat()}
+                'fecha': p['fecha'].isoformat(), 'centroId': p['centro_id']}
                for p in preview if 'id' in p]
     return preview, payload
+
+
+def folios_devolubles(folios_centros):
+    """{folio_id: centro_id} → ids que el centro de su fila tiene entregados.
+
+    Revalidación del confirm de importar de devoluciones: el centro viene por
+    fila, así que el par (folio, centro) se comprueba uno a uno (el hidden es
+    editable y el estado pudo cambiar desde la vista previa).
+    """
+    if not folios_centros:
+        return []
+    filas = db.session.query(
+        EntregaFolio.folio_id, EntregaFolio.centroId
+    ).join(Folio, Folio.id == EntregaFolio.folio_id).filter(
+        EntregaFolio.folio_id.in_(folios_centros),
+        EntregaFolio.centroId.in_(set(folios_centros.values())),
+        Folio.estado == 'entregado',
+    ).all()
+    pares = {(f, c) for f, c in filas}
+    return [fid for fid, cid in folios_centros.items() if (fid, cid) in pares]
 
 
 def crear_movimiento(*, modelo, fecha_field, folio_ids, fecha, centro_id, user,

@@ -23,23 +23,20 @@
             <div class="card-body p-4">
                 <p class="text-muted mb-3">
                     El archivo debe tener exactamente estas columnas en la fila 1:
-                    <code>folio</code>, <code>tipoCert</code>, <code>anioCert</code> y
-                    opcionalmente <code>usuario</code> (username del responsable; si se
-                    omite o la celda está vacía, el registro queda a nombre de quien
-                    importa). Una fila por folio (máx. 5000 filas). El centro se
-                    toma de este formulario y la fecha va por fila en el archivo
-                    (columna obligatoria <code>fecha</code>, formato dd/mm/aaaa).
+                    <code>folio</code>, <code>tipoCert</code>, <code>anioCert</code>,
+                    <code>fecha</code>, <code>centro</code> (nombre exacto del centro
+                    de salud según la base de datos; el centro va por fila y un
+                    archivo puede mezclar centros distintos) y <code>usuario</code>
+                    (username del responsable). Todas las columnas son obligatorias:
+                    un archivo sin alguna de ellas se rechaza y una celda de
+                    <code>usuario</code> vacía deja la fila inválida. Una fila por
+                    folio (máx. 5000 filas). La fecha va por
+                    fila en el archivo (columna obligatoria <code>fecha</code>,
+                    formato dd/mm/aaaa).
                 </p>
                 <form method="POST" enctype="multipart/form-data">
                     {{ form.hidden_tag() }}
                     <div class="row g-3">
-                        <div class="col-md-4">
-                            <label class="form-label fw-semibold">{{ form.centroId.label.text }}</label>
-                            {{ form.centroId(class="form-select") }}
-                            {% for error in form.centroId.errors %}
-                                <div class="text-danger small mt-1" role="alert">{{ error }}</div>
-                            {% endfor %}
-                        </div>
                         <div class="col-md-8">
                             <label class="form-label fw-semibold">{{ form.archivo.label.text }}</label>
                             {{ form.archivo(class="form-control") }}
@@ -61,7 +58,7 @@
                 <div class="alert {% if total_validas %}alert-info{% else %}alert-danger{% endif %} mb-3">
                     <i class="fas fa-list-check me-1"></i>
                     <strong>{{ total_validas }}</strong> folio(s) válido(s) de <strong>{{ preview|length }}</strong>
-                    para <strong>{{ centro_nombre }}</strong>.
+                    {%- if centros_nombre %} para <strong>{{ centros_nombre }}</strong>{% endif %}.
                     {% set responsables = preview|selectattr('usuario')|map(attribute='usuario')|unique|list %}
                     {% if responsables %}
                     A nombre de <strong>{{ responsables[:3]|join(', ') }}{{ ' y más' if responsables|length > 3 else '' }}</strong>.
@@ -78,6 +75,7 @@
                                 <th style="width:60px">#</th>
                                 <th>Folio</th>
                                 <th>Fecha</th>
+                                <th>Centro</th>
                                 <th>Usuario</th>
                                 <th>Estado</th>
                             </tr>
@@ -88,6 +86,13 @@
                                 <td>{{ p.n }}</td>
                                 <td class="col-folio">{{ p.etiqueta }}</td>
                                 <td>{{ p.fecha.strftime('%d/%m/%Y') if p.fecha else '—' }}</td>
+                                <td>
+                                    {% if p.centro %}
+                                        <span class="badge bg-info text-dark">{{ p.centro }}</span>
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
                                 <td>
                                     {% if p.usuario %}
                                         <span class="badge bg-secondary">{{ p.usuario }}</span>
@@ -112,7 +117,6 @@
                 <form method="POST" action="{{ url_for('entregas.importar_confirmar') }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="payload" value="{{ payload_json }}">
-                    <input type="hidden" name="centroId" value="{{ form.centroId.data }}">
                     <div class="d-flex justify-content-end gap-2">
                         <a href="{{ url_for('entregas.importar') }}" class="btn btn-outline-secondary">Cancelar</a>
                         <button type="submit" class="btn btn-success">

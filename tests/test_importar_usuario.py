@@ -1,11 +1,12 @@
-"""Importar: columna "usuario" en la plantilla .xlsx manda por fila.
+"""Importar: columna "usuario" en la plantilla .xlsx obligatoria por fila.
 
 La plantilla descargable lleva una columna final `usuario` con el username del
-dueño de la información. La celda manda por fila: si está vacía o la columna
-no existe (archivos viejos), el responsable es el usuario que ejecuta la
-importación. Username desconocido o inactivo deja la fila inválida en la
-vista previa. El registro (userId) queda en el responsable; audit_logs en el
-actor real. El selector visible del form ya no existe: manda el Excel.
+dueño de la información. TODAS las columnas son obligatorias: un archivo sin
+la columna `usuario` se rechaza (encabezados incorrectos) y una celda vacía
+deja la fila inválida en la vista previa (`Usuario vacío.`). Username
+desconocido o inactivo también marca la fila. El registro (userId) queda en
+el responsable; audit_logs en el actor real. El selector visible del form ya
+no existe: manda el Excel.
 """
 
 import json
@@ -22,7 +23,7 @@ from tests.conftest import make_folio, make_user
 
 HEADERS_RECEPCION = ['fecha', 'anioCert', 'tipoCert', 'folioInicial', 'folioFinal', 'usuario']
 HEADERS_RECEPCION_SIN_USUARIO = HEADERS_RECEPCION[:-1]
-HEADERS_FOLIOS = ['folio', 'tipoCert', 'anioCert', 'fecha', 'usuario']
+HEADERS_FOLIOS = ['folio', 'tipoCert', 'anioCert', 'fecha', 'centro', 'usuario']
 Y = 2026
 
 
@@ -136,7 +137,8 @@ def test_recepcion_usuario_inactivo_marca_fila(admin_client, tipo, app):
     assert 'Usuario inactivo: baja.' in resp.get_data(as_text=True)
 
 
-def test_recepcion_sin_columna_atribuye_al_actual(admin_client, tipo, admin):
+def test_recepcion_archivo_sin_columna_usuario_rechazado(admin_client, tipo):
+    """Todas las columnas son obligatorias: el archivo viejo ya no pasa."""
     resp = admin_client.post(
         '/recepcion/importar',
         data={'archivo': (
@@ -145,18 +147,12 @@ def test_recepcion_sin_columna_atribuye_al_actual(admin_client, tipo, admin):
             'i.xlsx')},
         content_type='multipart/form-data',
     )
-    assert 'Válida' in resp.get_data(as_text=True), 'archivos viejos siguen validos'
-
-    payload = json.dumps([{
-        'fecha': '2026-10-01', 'anioCert': Y, 'tipoCert_id': tipo.id,
-        'folioInicial': 1, 'folioFinal': 5,
-    }])
-    admin_client.post('/recepcion/importar/confirmar',
-                      data={'payload': payload}, follow_redirects=True)
-    assert RecepcionFolio.query.one().userId == admin.id
+    text = resp.get_data(as_text=True)
+    assert 'Encabezados incorrectos' in text, 'todas las columnas obligatorias'
+    assert RecepcionFolio.query.count() == 0
 
 
-def test_recepcion_celda_vacia_atribuye_al_actual(admin_client, tipo, admin, otro_usuario):
+def test_recepcion_celda_usuario_vacia_marca_fila(admin_client, tipo):
     resp = admin_client.post(
         '/recepcion/importar',
         data={'archivo': (
@@ -166,8 +162,9 @@ def test_recepcion_celda_vacia_atribuye_al_actual(admin_client, tipo, admin, otr
         content_type='multipart/form-data',
     )
     text = resp.get_data(as_text=True)
-    assert f'&#34;usuario_id&#34;: {admin.id}' in text
-    assert 'Válida' in text
+    assert 'Usuario vacío.' in text
+    assert '<strong>0</strong> fila(s) válida(s) de <strong>1</strong>' in text
+    assert RecepcionFolio.query.count() == 0
 
 
 def test_recepcion_preview_muestra_responsable_por_fila(admin_client, tipo, otro_usuario):
@@ -180,8 +177,7 @@ def test_recepcion_preview_muestra_responsable_por_fila(admin_client, tipo, otro
         content_type='multipart/form-data',
     )
     text = resp.get_data(as_text=True)
-    assert 'otro' in text
-    assert 'a nombre de' in text
+    assert 'badge bg-secondary">otro<' in text, 'la preview muestra el responsable'
 
 
 # --- entregas: atribución mixta por fila y agrupación en el confirm ---
@@ -194,10 +190,9 @@ def test_entregas_preview_lleva_usuario_por_folio(admin_client, tipo, centro, op
         '/entregas/importar',
         data={
             'archivo': (make_xlsx(HEADERS_FOLIOS, [
-                [1000, tipo.name, Y, '2026-10-01', 'otro'],
-                [1001, tipo.name, Y, '2026-10-01', 'operador'],
+                [1000, tipo.name, Y, '2026-10-01', centro.name, 'otro'],
+                [1001, tipo.name, Y, '2026-10-01', centro.name, 'operador'],
             ]), 'i.xlsx'),
-            'centroId': str(centro.id),
         },
         content_type='multipart/form-data',
     )
@@ -210,10 +205,11 @@ def test_entregas_confirm_agrupa_por_usuario(admin_client, tipo, centro, admin, 
     f2 = make_folio(tipo, anio=Y, numero=1001)
     admin_client.post('/entregas/importar/confirmar', data={
         'payload': json.dumps([
-            {'id': f1.id, 'usuarioId': otro_usuario.id, 'fecha': '2026-10-01'},
-            {'id': f2.id, 'usuarioId': operador.id, 'fecha': '2026-10-01'},
+            {'id': f1.id, 'usuarioId': otro_usuario.id, 'fecha': '2026-10-01',
+             'centroId': centro.id},
+            {'id': f2.id, 'usuarioId': operador.id, 'fecha': '2026-10-01',
+             'centroId': centro.id},
         ]),
-        'centroId': str(centro.id),
     }, follow_redirects=True)
 
     entregas = EntregaFolio.query.order_by(EntregaFolio.folio_id).all()
@@ -230,9 +226,9 @@ def test_entregas_usuario_desconocido_marca_fila(admin_client, tipo, centro):
         '/entregas/importar',
         data={
             'archivo': (make_xlsx(HEADERS_FOLIOS,
-                                  [[1000, tipo.name, Y, '2026-10-01', 'fantasma']]),
+                                  [[1000, tipo.name, Y, '2026-10-01',
+                                    centro.name, 'fantasma']]),
                         'i.xlsx'),
-            'centroId': str(centro.id),
         },
         content_type='multipart/form-data',
     )
@@ -249,9 +245,9 @@ def test_devoluciones_columna_usuario_atribuye_a_otro(admin_client, folio_entreg
         data={
             'archivo': (make_xlsx(HEADERS_FOLIOS,
                                   [[folio_entregado.folio,
-                                    'Defunciones', Y, '2026-10-02', 'otro']]),
+                                    'Defunciones', Y, '2026-10-02',
+                                    centro.name, 'otro']]),
                         'i.xlsx'),
-            'centroId': str(centro.id),
         },
         content_type='multipart/form-data',
     )
@@ -260,8 +256,8 @@ def test_devoluciones_columna_usuario_atribuye_a_otro(admin_client, folio_entreg
     admin_client.post('/devoluciones/importar/confirmar', data={
         'payload': json.dumps([{'id': folio_entregado.id,
                                 'usuarioId': otro_usuario.id,
-                                'fecha': '2026-10-02'}]),
-        'centroId': str(centro.id),
+                                'fecha': '2026-10-02',
+                                'centroId': centro.id}]),
     }, follow_redirects=True)
 
     d = DevolucionFolio.query.one()
@@ -276,9 +272,9 @@ def test_devoluciones_usuario_desconocido_marca_fila(admin_client, folio_entrega
         data={
             'archivo': (make_xlsx(HEADERS_FOLIOS,
                                   [[folio_entregado.folio,
-                                    'Defunciones', Y, '2026-10-02', 'fantasma']]),
+                                    'Defunciones', Y, '2026-10-02',
+                                    centro.name, 'fantasma']]),
                         'i.xlsx'),
-            'centroId': str(centro.id),
         },
         content_type='multipart/form-data',
     )
@@ -293,7 +289,6 @@ def test_confirm_payload_enteros_legado_rechazado(admin_client, tipo, centro):
     folio = make_folio(tipo, anio=Y, numero=1000)
     resp = admin_client.post('/entregas/importar/confirmar', data={
         'payload': json.dumps([folio.id]),
-        'centroId': str(centro.id),
     }, follow_redirects=True)
     assert 'inválidos' in resp.get_data(as_text=True)
     assert EntregaFolio.query.count() == 0
@@ -303,7 +298,7 @@ def test_confirm_usuario_id_invalido_usa_al_actual(admin_client, tipo, centro, a
     folio = make_folio(tipo, anio=Y, numero=1000)
     admin_client.post('/entregas/importar/confirmar', data={
         'payload': json.dumps([{'id': folio.id, 'usuarioId': 999999,
-                                'fecha': '2026-10-01'}]),
-        'centroId': str(centro.id),
+                                'fecha': '2026-10-01',
+                                'centroId': centro.id}]),
     }, follow_redirects=True)
     assert EntregaFolio.query.one().userId == admin.id

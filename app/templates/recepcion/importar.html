@@ -24,9 +24,11 @@
                 <p class="text-muted mb-3">
                     El archivo debe tener exactamente estas columnas en la fila 1:
                     <code>fecha</code>, <code>anioCert</code>, <code>tipoCert</code>,
-                    <code>folioInicial</code>, <code>folioFinal</code> y opcionalmente
-                    <code>usuario</code> (username del responsable; si se omite o la
-                    celda está vacía, el registro queda a nombre de quien importa).
+                    <code>folioInicial</code>, <code>folioFinal</code> y
+                    <code>usuario</code> (username del responsable). Todas las
+                    columnas son obligatorias: un archivo sin alguna de ellas se
+                    rechaza y una celda de <code>usuario</code> vacía deja la fila
+                    inválida.
                     Una fila por rango (máx. 500 filas, 10000 folios por rango).
                 </p>
                 <form method="POST" enctype="multipart/form-data">
