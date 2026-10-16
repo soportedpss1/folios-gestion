@@ -62,7 +62,7 @@
                         {% elif not proximo %}
                             Inmediato (sin intentos desde el último reinicio)
                         {% elif atrasado %}
-                            <span class="text-warning">Pendiente (atrasado)</span>
+                            <span class="text-dark"><i class="fas fa-exclamation-triangle text-warning me-1" aria-hidden="true"></i>Pendiente (atrasado)</span>
                         {% else %}
                             {{ (proximo|localtime).strftime('%d/%m/%Y %H:%M') }}
                         {% endif %}
@@ -111,6 +111,7 @@
                     </div>
 
                     <div class="mb-3">
+                        {{ form.frecuencia_minutos.label(class="form-label fw-semibold") }}
                         {{ form.frecuencia_minutos(class="form-control" ~ (" is-invalid" if form.frecuencia_minutos.errors else "")) }}
                         {% for error in form.frecuencia_minutos.errors %}
                             <div class="text-danger small mt-1" role="alert">{{ error }}</div>

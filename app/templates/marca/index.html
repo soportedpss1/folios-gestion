@@ -59,7 +59,7 @@
                             <label class="form-label fw-semibold" for="{{ form.logo.id }}">
                                 {{ form.logo.label.text }}
                             </label>
-                            {{ form.logo(class="form-control" ~ (" is-invalid" if form.logo.errors else "")) }}
+                            {{ form.logo(class="form-control" ~ (" is-invalid" if form.logo.errors else ""), accept="image/png,image/jpeg,image/webp") }}
                             {% for error in form.logo.errors %}
                                 <div class="text-danger small mt-1" role="alert">{{ error }}</div>
                             {% endfor %}
@@ -69,7 +69,7 @@
                             <label class="form-label fw-semibold" for="{{ form.favicon.id }}">
                                 {{ form.favicon.label.text }}
                             </label>
-                            {{ form.favicon(class="form-control" ~ (" is-invalid" if form.favicon.errors else "")) }}
+                            {{ form.favicon(class="form-control" ~ (" is-invalid" if form.favicon.errors else ""), accept="image/png,.ico,image/x-icon") }}
                             {% for error in form.favicon.errors %}
                                 <div class="text-danger small mt-1" role="alert">{{ error }}</div>
                             {% endfor %}

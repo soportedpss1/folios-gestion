@@ -21,8 +21,8 @@
     <div class="card-body">
         <form method="GET" id="filterForm" class="row g-3 align-items-end">
             <div class="col-md-3">
-                <label class="form-label small fw-semibold">Año</label>
-                <select name="anioCert" class="form-select form-select-sm">
+                <label class="form-label small fw-semibold" for="anioCert">Año</label>
+                <select id="anioCert" name="anioCert" class="form-select form-select-sm">
                     <option value="">Todos</option>
                     {% for y in range(anio_actual - 5, anio_actual + 2) %}
                         <option value="{{ y }}" {% if current_anio == y %}selected{% endif %}>{{ y }}</option>
@@ -33,8 +33,8 @@
                 </select>
             </div>
             <div class="col-md-4">
-                <label class="form-label small fw-semibold">Tipo Certificado</label>
-                <select name="tipoCert" class="form-select form-select-sm">
+                <label class="form-label small fw-semibold" for="tipoCert">Tipo Certificado</label>
+                <select id="tipoCert" name="tipoCert" class="form-select form-select-sm">
                     <option value="">Todos</option>
                     {% for t in tipos %}
                         <option value="{{ t.id }}" {% if current_tipo == t.id %}selected{% endif %}>{{ t.name }}</option>
@@ -42,8 +42,8 @@
                 </select>
             </div>
             <div class="col-md-3">
-                <label class="form-label small fw-semibold">Centro</label>
-                <select name="centroId" class="form-select form-select-sm">
+                <label class="form-label small fw-semibold" for="centroId">Centro</label>
+                <select id="centroId" name="centroId" class="form-select form-select-sm">
                     <option value="">Todos</option>
                     {% for c in centros %}
                         <option value="{{ c.id }}" {% if current_centro == c.id %}selected{% endif %}>{{ c.name }}</option>
@@ -51,8 +51,8 @@
                 </select>
             </div>
             <div class="col-md-3">
-                <label class="form-label small fw-semibold">Estado</label>
-                <select name="estado" class="form-select form-select-sm">
+                <label class="form-label small fw-semibold" for="estado">Estado</label>
+                <select id="estado" name="estado" class="form-select form-select-sm">
                     <option value="">Todos</option>
                     <option value="disponible" {% if current_estado == 'disponible' %}selected{% endif %}>Disponible</option>
                     <option value="entregado" {% if current_estado == 'entregado' %}selected{% endif %}>Entregado</option>
@@ -70,7 +70,7 @@
     </div>
 </div>
 
-<div class="row g-3 mb-4">
+<div class="row g-3 mb-4" aria-live="polite">
     <div class="col-md-3">
         <div class="card border-0 shadow-sm bg-primary text-white">
             <div class="card-body text-center">
@@ -108,7 +108,7 @@
 <div class="card border-0 shadow-sm">
     <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center">
         <h6 class="mb-0 fw-semibold">Detalle de Folios</h6>
-        <input type="text" class="form-control form-control-sm w-auto" id="tableSearch" placeholder="Buscar en tabla...">
+        <input type="text" class="form-control form-control-sm w-auto" id="tableSearch" aria-label="Buscar en tabla" placeholder="Buscar en tabla...">
     </div>
     <div class="card-body p-0">
         <div id="loadingSpinner" class="text-center py-5" style="display:none;">

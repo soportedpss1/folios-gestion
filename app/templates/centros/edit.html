@@ -21,7 +21,7 @@
 
                     <div class="row g-3">
                         <div class="col-md-12">
-                            <label class="form-label fw-semibold">{{ form.name.label.text }}</label>
+                            {{ form.name.label(class="form-label fw-semibold") }}
                             {{ form.name(class="form-control") }}
                             {% for error in form.name.errors %}
                                 <div class="text-danger small mt-1" role="alert">{{ error }}</div>
@@ -29,15 +29,15 @@
                         </div>
 
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">{{ form.telefono.label.text }}</label>
-                            {{ form.telefono(class="form-control") }}
+                            {{ form.telefono.label(class="form-label fw-semibold") }}
+                            {{ form.telefono(type="tel", class="form-control") }}
                             {% for error in form.telefono.errors %}
                                 <div class="text-danger small mt-1" role="alert">{{ error }}</div>
                             {% endfor %}
                         </div>
 
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">{{ form.direccion.label.text }}</label>
+                            {{ form.direccion.label(class="form-label fw-semibold") }}
                             {{ form.direccion(class="form-control") }}
                             {% for error in form.direccion.errors %}
                                 <div class="text-danger small mt-1" role="alert">{{ error }}</div>
@@ -49,7 +49,7 @@
 
                     <div class="form-check form-switch mb-3">
                         {{ form.activo(class="form-check-input") }}
-                        <label class="form-check-label fw-semibold">{{ form.activo.label.text }}</label>
+                        {{ form.activo.label(class="form-check-label fw-semibold") }}
                         <div class="form-text">Para reactivar un centro desactivado, márquelo y guarde.</div>
                     </div>
 

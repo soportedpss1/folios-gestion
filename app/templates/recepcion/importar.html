@@ -35,8 +35,8 @@
                     {{ form.hidden_tag() }}
                     <div class="row g-3 align-items-end">
                         <div class="col-md-8">
-                            <label class="form-label fw-semibold">{{ form.archivo.label.text }}</label>
-                            {{ form.archivo(class="form-control") }}
+                            {{ form.archivo.label(class="form-label fw-semibold") }}
+                            {{ form.archivo(class="form-control", accept=".xlsx") }}
                             {% for error in form.archivo.errors %}
                                 <div class="text-danger small mt-1" role="alert">{{ error }}</div>
                             {% endfor %}
@@ -52,7 +52,7 @@
         {% if preview %}
         <div class="card border-0 shadow-sm mb-4">
             <div class="card-body p-4">
-                <div class="alert {% if total_validas %}alert-info{% else %}alert-danger{% endif %} mb-3">
+                <div class="alert {% if total_validas %}alert-info{% else %}alert-danger{% endif %} mb-3" role="status" tabindex="-1">
                     <i class="fas fa-list-check me-1"></i>
                     <strong>{{ total_validas }}</strong> fila(s) válida(s) de <strong>{{ preview|length }}</strong>.
                     {% set responsables = preview|selectattr('usuario')|map(attribute='usuario')|unique|list %}

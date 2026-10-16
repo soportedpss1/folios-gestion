@@ -74,9 +74,9 @@
                 + '<td>' + escapeHtml(f.anioCert) + '</td>'
                 + '<td>' + (f.centro ? escapeHtml(f.centro) : '<span class="text-muted">-</span>') + '</td>'
                 + '<td>' + estadoBadge + '</td>'
-                + '<td><i class="fas ' + (f.digitado ? 'fa-check text-success' : 'fa-times text-muted') + '"></i></td>'
-                + '<td><i class="fas ' + (f.escaneado ? 'fa-check text-success' : 'fa-times text-muted') + '"></i></td>'
-                + '<td><i class="fas ' + (f.nulo ? 'fa-check text-success' : 'fa-times text-muted') + '"></i></td>'
+                + '<td><i class="fas ' + (f.digitado ? 'fa-check text-success' : 'fa-times text-muted') + '" aria-hidden="true"></i><span class="visually-hidden">' + (f.digitado ? 'Sí' : 'No') + '</span></td>'
+                + '<td><i class="fas ' + (f.escaneado ? 'fa-check text-success' : 'fa-times text-muted') + '" aria-hidden="true"></i><span class="visually-hidden">' + (f.escaneado ? 'Sí' : 'No') + '</span></td>'
+                + '<td><i class="fas ' + (f.nulo ? 'fa-check text-success' : 'fa-times text-muted') + '" aria-hidden="true"></i><span class="visually-hidden">' + (f.nulo ? 'Sí' : 'No') + '</span></td>'
                 + '<td>' + (f.fechaEntrega ? escapeHtml(f.fechaEntrega) : '<span class="text-muted">-</span>') + '</td>'
                 + '<td>' + (f.entregado_por ? '<span class="badge bg-primary">' + escapeHtml(f.entregado_por) + '</span>' : '<span class="text-muted">-</span>') + '</td>'
                 + '<td>' + (f.fechaDevolucion ? escapeHtml(f.fechaDevolucion) : '<span class="text-muted">-</span>') + '</td>'
@@ -95,8 +95,8 @@
         let html = '<nav class="mt-3"><ul class="pagination justify-content-center pagination-sm">';
 
         html += '<li class="page-item' + (pag.has_prev ? '' : ' disabled') + '">'
-            + '<a class="page-link" href="#" data-page="' + (pag.prev_num || 1) + '">'
-            + '<i class="fas fa-chevron-left"></i></a></li>';
+            + '<a class="page-link" href="#" aria-label="Página anterior" data-page="' + (pag.prev_num || 1) + '">'
+            + '<i class="fas fa-chevron-left" aria-hidden="true"></i></a></li>';
 
         const range = 2;
         const start = Math.max(1, pag.page - range);
@@ -118,8 +118,8 @@
         }
 
         html += '<li class="page-item' + (pag.has_next ? '' : ' disabled') + '">'
-            + '<a class="page-link" href="#" data-page="' + (pag.next_num || pag.pages) + '">'
-            + '<i class="fas fa-chevron-right"></i></a></li>';
+            + '<a class="page-link" href="#" aria-label="Página siguiente" data-page="' + (pag.next_num || pag.pages) + '">'
+            + '<i class="fas fa-chevron-right" aria-hidden="true"></i></a></li>';
 
         html += '</ul></nav>';
         paginationContainer.innerHTML = html;
@@ -173,6 +173,7 @@
                 emptyState.innerHTML = '<i class="fas fa-exclamation-triangle fa-3x text-danger mb-3"></i>'
                     + '<p class="text-danger mb-1 fw-semibold">Error al cargar los datos</p>'
                     + '<p class="text-muted small mb-0">' + escapeHtml(err && err.message) + '</p>';
+                emptyState.setAttribute('role', 'alert');
                 emptyState.style.display = '';
             });
     }

@@ -21,7 +21,7 @@
 
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">{{ form.centroId.label.text }}</label>
+                            {{ form.centroId.label(class="form-label fw-semibold") }}
                             {{ form.centroId(class="form-select", id="centro-select") }}
                             {% for error in form.centroId.errors %}
                                 <div class="text-danger small mt-1" role="alert">{{ error }}</div>
@@ -39,14 +39,14 @@
                         </div>
 
                         <div class="col-md-12">
-                            <label class="form-label fw-semibold">
+                            <label class="form-label fw-semibold" for="folio-select">
                                 {{ form.folio_ids.label.text }}
-                                <span class="badge bg-info ms-2" id="selected-count">0 seleccionados</span>
+                                <span class="badge bg-info text-dark ms-2" id="selected-count" aria-live="polite">0 seleccionados</span>
                             </label>
                             <div class="row g-3">
                                 <div class="col-md-8">
                                     {{ form.folio_ids(class="form-select", size="10", id="folio-select") }}
-                                    <small class="text-muted" id="folio-hint">Seleccione un tipo de certificado</small>
+                                    <small class="text-muted" id="folio-hint" aria-live="polite">Seleccione un tipo de certificado</small>
                                     <div id="folio-vacio" class="text-muted mt-1" style="display:none;">
                                         <i class="fas fa-info-circle me-1"></i>No hay folios pendientes de devolución para este centro
                                     </div>
@@ -75,7 +75,7 @@
                         </div>
 
                         <div class="col-md-12">
-                            <label class="form-label fw-semibold">{{ form.fechaDevolucion.label.text }}</label>
+                            {{ form.fechaDevolucion.label(class="form-label fw-semibold") }}
                             {{ form.fechaDevolucion(class="form-control") }}
                             {% for error in form.fechaDevolucion.errors %}
                                 <div class="text-danger small mt-1" role="alert">{{ error }}</div>

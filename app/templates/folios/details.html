@@ -46,12 +46,14 @@
                           data-loading>
                         {{ form_transfer.hidden_tag() }}
                         <div class="mb-2">
+                            {{ form_transfer.centroDestino.label(class='visually-hidden') }}
                             {{ form_transfer.centroDestino(class='form-select' + (' is-invalid' if form_transfer.centroDestino.errors else '')) }}
                             {% for error in form_transfer.centroDestino.errors %}
                             <div class="invalid-feedback d-block">{{ error }}</div>
                             {% endfor %}
                         </div>
                         <div class="mb-2">
+                            {{ form_transfer.motivo.label(class='visually-hidden') }}
                             {{ form_transfer.motivo(class='form-control' + (' is-invalid' if form_transfer.motivo.errors else ''),
                                   rows=2, maxlength=500,
                                   placeholder='Motivo de la transferencia…') }}
@@ -232,6 +234,7 @@
               data-loading class="mb-4">
             {{ form.hidden_tag() }}
             <div class="mb-2">
+                {{ form.texto.label(class='visually-hidden') }}
                 {{ form.texto(class='form-control' + (' is-invalid' if form.texto.errors else ''),
                               rows=3, maxlength=1000,
                               placeholder='Escriba un comentario sobre este folio…') }}

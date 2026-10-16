@@ -89,24 +89,24 @@
 
 <ul class="nav nav-tabs mb-3" role="tablist">
     <li class="nav-item">
-        <a class="nav-link active" data-bs-toggle="tab" href="#tab-pendientes">
+        <a class="nav-link active" role="tab" id="tablink-pendientes" data-bs-toggle="tab" href="#tab-pendientes" aria-controls="tab-pendientes" aria-selected="true">
             <i class="fas fa-clock me-1 text-warning"></i>Pendientes ({{ pendientes|length }})
         </a>
     </li>
     <li class="nav-item">
-        <a class="nav-link" data-bs-toggle="tab" href="#tab-todos">
+        <a class="nav-link" role="tab" id="tablink-todos" data-bs-toggle="tab" href="#tab-todos" aria-controls="tab-todos" aria-selected="false">
             <i class="fas fa-list me-1 text-primary"></i>Todos Entregados ({{ entregas|length }})
         </a>
     </li>
     <li class="nav-item">
-        <a class="nav-link" data-bs-toggle="tab" href="#tab-devueltos">
+        <a class="nav-link" role="tab" id="tablink-devueltos" data-bs-toggle="tab" href="#tab-devueltos" aria-controls="tab-devueltos" aria-selected="false">
             <i class="fas fa-check-circle me-1 text-success"></i>Devueltos ({{ devueltos|length }})
         </a>
     </li>
 </ul>
 
 <div class="tab-content">
-    <div class="tab-pane fade show active" id="tab-pendientes">
+    <div class="tab-pane fade show active" id="tab-pendientes" role="tabpanel" aria-labelledby="tablink-pendientes" tabindex="0">
         <div class="card border-0 shadow-sm">
             <div class="card-body p-0">
                 <div class="table-responsive">
@@ -134,7 +134,7 @@
                                     {% elif dias > 15 %}
                                         <span class="badge bg-warning text-dark">{{ dias }} días</span>
                                     {% else %}
-                                        <span class="badge bg-info">{{ dias }} días</span>
+                                        <span class="badge bg-info text-dark">{{ dias }} días</span>
                                     {% endif %}
                                 </td>
                             </tr>
@@ -153,7 +153,7 @@
         </div>
     </div>
 
-    <div class="tab-pane fade" id="tab-todos">
+    <div class="tab-pane fade" id="tab-todos" role="tabpanel" aria-labelledby="tablink-todos" tabindex="0">
         <div class="card border-0 shadow-sm">
             <div class="card-body p-0">
                 <div class="table-responsive">
@@ -218,7 +218,7 @@
         </div>
     </div>
 
-    <div class="tab-pane fade" id="tab-devueltos">
+    <div class="tab-pane fade" id="tab-devueltos" role="tabpanel" aria-labelledby="tablink-devueltos" tabindex="0">
         <div class="card border-0 shadow-sm">
             <div class="card-body p-0">
                 <div class="table-responsive">
@@ -249,7 +249,7 @@
                                 <td>{{ d.fechaDevolucion.strftime('%d/%m/%Y') }}</td>
                                 <td><span class="badge bg-success">{{ d.usuario.username }}</span></td>
                                 <td class="text-center">
-                                    <span class="badge bg-info">{{ dias }} días</span>
+                                    <span class="badge bg-info text-dark">{{ dias }} días</span>
                                 </td>
                             </tr>
                             {% else %}

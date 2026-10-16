@@ -21,7 +21,7 @@
 
                     <div class="row g-3">
                         <div class="col-md-12">
-                            <label class="form-label fw-semibold">{{ form.name.label.text }}</label>
+                            {{ form.name.label(class="form-label fw-semibold") }}
                             {{ form.name(class="form-control", placeholder="Ej: Nacimientos Nacionales") }}
                             {% for error in form.name.errors %}
                                 <div class="text-danger small mt-1" role="alert">{{ error }}</div>
@@ -29,7 +29,7 @@
                         </div>
 
                         <div class="col-md-12">
-                            <label class="form-label fw-semibold">{{ form.descripcion.label.text }}</label>
+                            {{ form.descripcion.label(class="form-label fw-semibold") }}
                             {{ form.descripcion(class="form-control", rows="3", placeholder="Descripción opcional del tipo de certificado") }}
                             {% for error in form.descripcion.errors %}
                                 <div class="text-danger small mt-1" role="alert">{{ error }}</div>
@@ -37,7 +37,7 @@
                         </div>
 
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">{{ form.color.label.text }}</label>
+                            {{ form.color.label(class="form-label fw-semibold") }}
                             <div class="input-group">
                                 {{ form.color(class="form-control form-control-color", type="color") }}
                                 <span class="input-group-text">{{ form.color.data }}</span>

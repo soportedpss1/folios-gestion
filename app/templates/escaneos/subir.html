@@ -35,15 +35,15 @@
                     {{ form.hidden_tag() }}
                     <div class="row g-3 align-items-end">
                         <div class="col-md-4">
-                            <label class="form-label fw-semibold">{{ form.anio.label.text }}</label>
+                            {{ form.anio.label(class="form-label fw-semibold") }}
                             {{ form.anio(class="form-select") }}
                             {% for error in form.anio.errors %}
                                 <div class="text-danger small mt-1" role="alert">{{ error }}</div>
                             {% endfor %}
                         </div>
                         <div class="col-md-5">
-                            <label class="form-label fw-semibold">{{ form.archivos.label.text }}</label>
-                            {{ form.archivos(class="form-control", multiple=True) }}
+                            {{ form.archivos.label(class="form-label fw-semibold") }}
+                            {{ form.archivos(class="form-control", multiple=True, accept=".jpg,.jpeg,image/jpeg") }}
                             {% for error in form.archivos.errors %}
                                 <div class="text-danger small mt-1" role="alert">{{ error }}</div>
                             {% endfor %}
@@ -60,7 +60,7 @@
         {% if reporte %}
         <div class="card border-0 shadow-sm mb-4">
             <div class="card-body p-4">
-                <div class="alert alert-info">
+                <div class="alert alert-info" role="status" tabindex="-1">
                     <i class="fas fa-list-check me-1"></i>
                     <strong>{{ reporte.marcados }}</strong> archivo(s) con folio
                     marcado,

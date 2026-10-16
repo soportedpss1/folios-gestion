@@ -21,8 +21,8 @@
 
                     <div class="row g-3">
                         <div class="col-md-12">
-                            <label class="form-label fw-semibold">{{ form.folio_id.label.text }}</label>
-                            <input type="text" class="form-control" value="Folio {{ devolucion.folio.folio }}" readonly>
+                            <label class="form-label fw-semibold" for="folio-display">{{ form.folio_id.label.text }}</label>
+                            <input type="text" class="form-control" id="folio-display" value="Folio {{ devolucion.folio.folio }}" readonly>
                             {{ form.folio_id(style='display:none') }}
                             <small class="text-muted">El folio de la devolución no se puede cambiar desde esta pantalla</small>
                             {% for error in form.folio_id.errors %}
@@ -31,7 +31,7 @@
                         </div>
 
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">{{ form.fechaDevolucion.label.text }}</label>
+                            {{ form.fechaDevolucion.label(class="form-label fw-semibold") }}
                             {{ form.fechaDevolucion(class="form-control") }}
                             {% for error in form.fechaDevolucion.errors %}
                                 <div class="text-danger small mt-1" role="alert">{{ error }}</div>
@@ -39,7 +39,7 @@
                         </div>
 
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">{{ form.centroId.label.text }}</label>
+                            {{ form.centroId.label(class="form-label fw-semibold") }}
                             {{ form.centroId(class="form-select", id="centro-select") }}
                             {% for error in form.centroId.errors %}
                                 <div class="text-danger small mt-1" role="alert">{{ error }}</div>

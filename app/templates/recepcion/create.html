@@ -21,7 +21,7 @@
 
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">{{ form.fecha.label.text }}</label>
+                            {{ form.fecha.label(class="form-label fw-semibold") }}
                             {{ form.fecha(class="form-control") }}
                             {% for error in form.fecha.errors %}
                                 <div class="text-danger small mt-1" role="alert">{{ error }}</div>
@@ -29,7 +29,7 @@
                         </div>
 
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">{{ form.anioCert.label.text }}</label>
+                            {{ form.anioCert.label(class="form-label fw-semibold") }}
                             {{ form.anioCert(class="form-control", placeholder="Ej: 2026") }}
                             {% for error in form.anioCert.errors %}
                                 <div class="text-danger small mt-1" role="alert">{{ error }}</div>
@@ -37,7 +37,7 @@
                         </div>
 
                         <div class="col-md-12">
-                            <label class="form-label fw-semibold">{{ form.tipoCert.label.text }}</label>
+                            {{ form.tipoCert.label(class="form-label fw-semibold") }}
                             {{ form.tipoCert(class="form-select") }}
                             {% for error in form.tipoCert.errors %}
                                 <div class="text-danger small mt-1" role="alert">{{ error }}</div>
@@ -45,7 +45,7 @@
                         </div>
 
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">{{ form.folioInicial.label.text }}</label>
+                            {{ form.folioInicial.label(class="form-label fw-semibold") }}
                             {{ form.folioInicial(class="form-control", placeholder="Ej: 1", inputmode="numeric") }}
                             {% for error in form.folioInicial.errors %}
                                 <div class="text-danger small mt-1" role="alert">{{ error }}</div>
@@ -53,7 +53,7 @@
                         </div>
 
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">{{ form.folioFinal.label.text }}</label>
+                            {{ form.folioFinal.label(class="form-label fw-semibold") }}
                             {{ form.folioFinal(class="form-control", placeholder="Ej: 100", inputmode="numeric") }}
                             {% for error in form.folioFinal.errors %}
                                 <div class="text-danger small mt-1" role="alert">{{ error }}</div>
@@ -61,7 +61,7 @@
                         </div>
 
                         <div class="col-12">
-                            <div class="alert alert-info mb-0">
+                            <div class="alert alert-info mb-0" role="status">
                                 <i class="fas fa-info-circle me-1"></i>
                                 Se crearán folios individuales del <strong id="preview-inicial">?</strong> al <strong id="preview-final">?</strong>
                                 (<span id="preview-total">0</span> folios)

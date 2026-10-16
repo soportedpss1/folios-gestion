@@ -35,8 +35,8 @@
     <div class="card-body">
         <form method="GET" class="row g-3 align-items-end">
             <div class="col-md-2">
-                <label class="form-label small fw-semibold">Año</label>
-                <select name="anioCert" class="form-select form-select-sm">
+                <label class="form-label small fw-semibold" for="anioCert">Año</label>
+                <select id="anioCert" name="anioCert" class="form-select form-select-sm">
                     <option value="">Todos</option>
                     {% for y in range(anio_actual - 1, anio_actual + 5) %}
                         <option value="{{ y }}" {% if current_anio == y %}selected{% endif %}>{{ y }}</option>
@@ -44,8 +44,8 @@
                 </select>
             </div>
             <div class="col-md-3">
-                <label class="form-label small fw-semibold">Tipo Certificado</label>
-                <select name="tipoCert" class="form-select form-select-sm">
+                <label class="form-label small fw-semibold" for="tipoCert">Tipo Certificado</label>
+                <select id="tipoCert" name="tipoCert" class="form-select form-select-sm">
                     <option value="">Todos</option>
                     {% for t in tipos %}
                         <option value="{{ t.id }}" {% if current_tipo == t.id %}selected{% endif %}>{{ t.name }}</option>
@@ -53,8 +53,8 @@
                 </select>
             </div>
             <div class="col-md-2">
-                <label class="form-label small fw-semibold">Estado</label>
-                <select name="estado" class="form-select form-select-sm">
+                <label class="form-label small fw-semibold" for="estado">Estado</label>
+                <select id="estado" name="estado" class="form-select form-select-sm">
                     <option value="">Todos</option>
                     <option value="disponible" {% if current_estado == 'disponible' %}selected{% endif %}>Disponible</option>
                     <option value="entregado" {% if current_estado == 'entregado' %}selected{% endif %}>Entregado</option>
@@ -66,8 +66,8 @@
                 </select>
             </div>
             <div class="col-md-3">
-                <label class="form-label small fw-semibold">Buscar Folio</label>
-                <input type="text" name="busqueda" class="form-control form-control-sm" placeholder="Número de folio..." value="{{ current_busqueda or '' }}" inputmode="numeric" autocomplete="off">
+                <label class="form-label small fw-semibold" for="busqueda">Buscar Folio</label>
+                <input type="text" id="busqueda" name="busqueda" class="form-control form-control-sm" placeholder="Número de folio..." value="{{ current_busqueda or '' }}" inputmode="numeric" autocomplete="off">
             </div>
             <div class="col-md-2">
                 <button type="submit" class="btn btn-primary btn-sm w-100">

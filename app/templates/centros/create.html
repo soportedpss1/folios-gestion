@@ -21,7 +21,7 @@
 
                     <div class="row g-3">
                         <div class="col-md-12">
-                            <label class="form-label fw-semibold">{{ form.name.label.text }}</label>
+                            {{ form.name.label(class="form-label fw-semibold") }}
                             {{ form.name(class="form-control", placeholder="Nombre del centro de salud") }}
                             {% for error in form.name.errors %}
                                 <div class="text-danger small mt-1" role="alert">{{ error }}</div>
@@ -29,15 +29,15 @@
                         </div>
 
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">{{ form.telefono.label.text }}</label>
-                            {{ form.telefono(class="form-control", placeholder="Teléfono de contacto") }}
+                            {{ form.telefono.label(class="form-label fw-semibold") }}
+                            {{ form.telefono(type="tel", class="form-control", placeholder="Teléfono de contacto") }}
                             {% for error in form.telefono.errors %}
                                 <div class="text-danger small mt-1" role="alert">{{ error }}</div>
                             {% endfor %}
                         </div>
 
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">{{ form.direccion.label.text }}</label>
+                            {{ form.direccion.label(class="form-label fw-semibold") }}
                             {{ form.direccion(class="form-control", placeholder="Dirección del centro") }}
                             {% for error in form.direccion.errors %}
                                 <div class="text-danger small mt-1" role="alert">{{ error }}</div>

@@ -13,8 +13,8 @@
     <div class="card-body">
         <form method="GET" class="row g-3 align-items-end">
             <div class="col-md-3">
-                <label class="form-label small fw-semibold">Usuario</label>
-                <select name="user_id" class="form-select form-select-sm">
+                <label class="form-label small fw-semibold" for="user_id">Usuario</label>
+                <select id="user_id" name="user_id" class="form-select form-select-sm">
                     <option value="">Todos</option>
                     {% for u in usuarios %}
                         <option value="{{ u.id }}" {% if current_user_id == u.id %}selected{% endif %}>{{ u.username }}</option>
@@ -22,8 +22,8 @@
                 </select>
             </div>
             <div class="col-md-3">
-                <label class="form-label small fw-semibold">Acción</label>
-                <select name="accion" class="form-select form-select-sm">
+                <label class="form-label small fw-semibold" for="accion">Acción</label>
+                <select id="accion" name="accion" class="form-select form-select-sm">
                     <option value="">Todas</option>
                     <option value="INSERT" {% if current_accion == 'INSERT' %}selected{% endif %}>INSERT</option>
                     <option value="UPDATE" {% if current_accion == 'UPDATE' %}selected{% endif %}>UPDATE</option>
@@ -34,8 +34,8 @@
                 </select>
             </div>
             <div class="col-md-3">
-                <label class="form-label small fw-semibold">Tabla</label>
-                <select name="tabla" class="form-select form-select-sm">
+                <label class="form-label small fw-semibold" for="tabla">Tabla</label>
+                <select id="tabla" name="tabla" class="form-select form-select-sm">
                     <option value="">Todas</option>
                     <option value="usuarios" {% if current_tabla == 'usuarios' %}selected{% endif %}>usuarios</option>
                     <option value="centros" {% if current_tabla == 'centros' %}selected{% endif %}>centros</option>
@@ -65,7 +65,7 @@
     <div class="card-body">
         <div class="row g-3 align-items-center">
             <div class="col-md-4">
-                <input type="text" class="form-control form-control-sm" id="tableSearch" placeholder="Buscar en tabla...">
+                <input type="text" class="form-control form-control-sm" id="tableSearch" aria-label="Buscar en esta página" placeholder="Buscar en esta página...">
             </div>
         </div>
     </div>

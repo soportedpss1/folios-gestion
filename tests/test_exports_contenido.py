@@ -262,7 +262,7 @@ def test_filtro_anio_con_todos_y_rango_dinamico(auth_client):
     import re
     from datetime import datetime
     text = auth_client.get('/reportes/').get_data(as_text=True)
-    bloque = re.search(r'<select name="anioCert".*?</select>', text, re.S)
+    bloque = re.search(r'<select[^>]*name="anioCert".*?</select>', text, re.S)
     assert bloque, 'el filtro de año existe'
     opciones = bloque.group(0)
     assert '<option value="">Todos</option>' in opciones, 'falta la opción Todos'

@@ -126,7 +126,7 @@ def test_create_entrega_no_carga_folios_sin_tipo(auth_client, app, tipo):
     assert opciones is not None, 'select de folios ausente'
     assert '<option' not in opciones, (
         'el select de folios ya viene poblado sin elegir tipo de certificado')
-    assert 'id="folio-hint">Seleccione un tipo de certificado para ver los folios' in html, (
+    assert 'id="folio-hint" aria-live="polite">Seleccione un tipo de certificado para ver los folios' in html, (
         'sin hint que explique por qué no hay folios')
 
 
@@ -137,7 +137,7 @@ def test_create_devolucion_no_carga_folios_sin_tipo(auth_client, app, tipo):
     assert opciones is not None, 'select de folios ausente'
     assert '<option' not in opciones, (
         'el select de folios ya viene poblado sin elegir tipo de certificado')
-    assert '<small class="text-muted" id="folio-hint">Seleccione un tipo de certificado</small>' in html, (
+    assert '<small class="text-muted" id="folio-hint" aria-live="polite">Seleccione un tipo de certificado</small>' in html, (
         'el hint inicial no pide el tipo de certificado')
 
 

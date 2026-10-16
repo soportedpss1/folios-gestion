@@ -24,7 +24,7 @@
                     </h6>
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">{{ form.rol.label.text }}</label>
+                            {{ form.rol.label(class="form-label fw-semibold") }}
                             {{ form.rol(class="form-select") }}
                             {% for error in form.rol.errors %}
                                 <div class="text-danger small mt-1" role="alert">{{ error }}</div>
@@ -33,7 +33,7 @@
                         <div class="col-md-6 d-flex align-items-end">
                             <div class="form-check form-switch pb-2">
                                 {{ form.activo(class="form-check-input") }}
-                                <label class="form-check-label fw-semibold">{{ form.activo.label.text }}</label>
+                                {{ form.activo.label(class="form-check-label fw-semibold") }}
                             </div>
                         </div>
                     </div>

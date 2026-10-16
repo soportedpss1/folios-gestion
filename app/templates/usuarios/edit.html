@@ -21,7 +21,7 @@
 
                     <div class="row g-3">
                         <div class="col-md-12">
-                            <label class="form-label fw-semibold">{{ form.name.label.text }}</label>
+                            {{ form.name.label(class="form-label fw-semibold") }}
                             {{ form.name(class="form-control") }}
                             {% for error in form.name.errors %}
                                 <div class="text-danger small mt-1" role="alert">{{ error }}</div>
@@ -29,7 +29,7 @@
                         </div>
 
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">{{ form.username.label.text }}</label>
+                            {{ form.username.label(class="form-label fw-semibold") }}
                             {{ form.username(class="form-control") }}
                             {% for error in form.username.errors %}
                                 <div class="text-danger small mt-1" role="alert">{{ error }}</div>
@@ -37,23 +37,23 @@
                         </div>
 
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">{{ form.email.label.text }}</label>
-                            {{ form.email(class="form-control") }}
+                            {{ form.email.label(class="form-label fw-semibold") }}
+                            {{ form.email(type="email", autocomplete="email", class="form-control") }}
                             {% for error in form.email.errors %}
                                 <div class="text-danger small mt-1" role="alert">{{ error }}</div>
                             {% endfor %}
                         </div>
 
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">{{ form.password.label.text }}</label>
-                            {{ form.password(class="form-control") }}
+                            {{ form.password.label(class="form-label fw-semibold") }}
+                            {{ form.password(autocomplete="new-password", class="form-control") }}
                             {% for error in form.password.errors %}
                                 <div class="text-danger small mt-1" role="alert">{{ error }}</div>
                             {% endfor %}
                         </div>
 
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">{{ form.rol.label.text }}</label>
+                            {{ form.rol.label(class="form-label fw-semibold") }}
                             {{ form.rol(class="form-select") }}
                             {% for error in form.rol.errors %}
                                 <div class="text-danger small mt-1" role="alert">{{ error }}</div>
@@ -63,7 +63,7 @@
                         <div class="col-md-12">
                             <div class="form-check form-switch">
                                 {{ form.activo(class="form-check-input") }}
-                                <label class="form-check-label fw-semibold">{{ form.activo.label.text }}</label>
+                                {{ form.activo.label(class="form-check-label fw-semibold") }}
                             </div>
                         </div>
                     </div>

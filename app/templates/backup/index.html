@@ -59,7 +59,7 @@
                         <label class="form-label fw-semibold" for="{{ form.archivo.id }}">
                             {{ form.archivo.label.text }}
                         </label>
-                        {{ form.archivo(class="form-control" ~ (" is-invalid" if form.archivo.errors else "")) }}
+                        {{ form.archivo(class="form-control" ~ (" is-invalid" if form.archivo.errors else ""), accept=".json") }}
                         {% for error in form.archivo.errors %}
                             <div class="text-danger small mt-1" role="alert">{{ error }}</div>
                         {% endfor %}

@@ -17,8 +17,8 @@
     <div class="card-body">
         <form method="GET" class="row g-3 align-items-end">
             <div class="col-md-3">
-                <label class="form-label small fw-semibold">Centro origen</label>
-                <select name="origen" class="form-select form-select-sm">
+                <label class="form-label small fw-semibold" for="origen">Centro origen</label>
+                <select id="origen" name="origen" class="form-select form-select-sm">
                     <option value="">Todos</option>
                     {% for c in centros %}
                     <option value="{{ c.id }}" {% if current_origen == c.id %}selected{% endif %}>{{ c.name }}</option>
@@ -26,8 +26,8 @@
                 </select>
             </div>
             <div class="col-md-3">
-                <label class="form-label small fw-semibold">Centro destino</label>
-                <select name="destino" class="form-select form-select-sm">
+                <label class="form-label small fw-semibold" for="destino">Centro destino</label>
+                <select id="destino" name="destino" class="form-select form-select-sm">
                     <option value="">Todos</option>
                     {% for c in centros %}
                     <option value="{{ c.id }}" {% if current_destino == c.id %}selected{% endif %}>{{ c.name }}</option>
@@ -35,8 +35,8 @@
                 </select>
             </div>
             <div class="col-md-4">
-                <label class="form-label small fw-semibold">Buscar Folio</label>
-                <input type="text" name="busqueda" class="form-control form-control-sm"
+                <label class="form-label small fw-semibold" for="busqueda">Buscar Folio</label>
+                <input type="text" id="busqueda" name="busqueda" class="form-control form-control-sm"
                        placeholder="Número de folio..." value="{{ current_busqueda or '' }}"
                        inputmode="numeric" autocomplete="off">
             </div>

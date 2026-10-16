@@ -21,9 +21,9 @@
 
                     <div class="row g-3">
                         <div class="col-md-12">
-                            <label class="form-label fw-semibold">
+                            <label class="form-label fw-semibold" for="folio-select">
                                 {{ form.folio_ids.label.text }}
-                                <span class="badge bg-info ms-2" id="selected-count">0 seleccionados</span>
+                                <span class="badge bg-info text-dark ms-2" id="selected-count" aria-live="polite">0 seleccionados</span>
                             </label>
                             <label class="form-label fw-semibold" for="tipo-select">Tipo de certificado</label>
                             <select id="tipo-select" name="tipoFilter" class="form-select mb-2">
@@ -35,7 +35,7 @@
                             <div class="row g-3">
                                 <div class="col-md-8">
                                     {{ form.folio_ids(class="form-select", size="10", id="folio-select") }}
-                                    <small class="text-muted" id="folio-hint">Seleccione un tipo de certificado para ver los folios</small>
+                                    <small class="text-muted" id="folio-hint" aria-live="polite">Seleccione un tipo de certificado para ver los folios</small>
                                     {% for error in form.folio_ids.errors %}
                                         <div class="text-danger small mt-1" role="alert">{{ error }}</div>
                                     {% endfor %}
@@ -61,7 +61,7 @@
                         </div>
 
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">{{ form.fechaEntrega.label.text }}</label>
+                            {{ form.fechaEntrega.label(class="form-label fw-semibold") }}
                             {{ form.fechaEntrega(class="form-control") }}
                             {% for error in form.fechaEntrega.errors %}
                                 <div class="text-danger small mt-1" role="alert">{{ error }}</div>
@@ -69,7 +69,7 @@
                         </div>
 
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">{{ form.centroId.label.text }}</label>
+                            {{ form.centroId.label(class="form-label fw-semibold") }}
                             {{ form.centroId(class="form-select") }}
                             {% for error in form.centroId.errors %}
                                 <div class="text-danger small mt-1" role="alert">{{ error }}</div>
