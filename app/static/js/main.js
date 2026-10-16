@@ -362,6 +362,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const tooltips = document.querySelectorAll('[title]');
     tooltips.forEach(el => {
+        // #sync-timer: pintar() reescribe su title cada tick y el tooltip de
+        // JS se quedaría congelado; basta el title nativo.
+        if (el.id === 'sync-timer') return;
         // Bootstrap vino por CDN: sin él el resto del handler debe seguir.
         if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
             new bootstrap.Tooltip(el);

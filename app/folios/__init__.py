@@ -341,7 +341,7 @@ def transferir(id):
     log_audit(current_user.id, 'INSERT', 'transferencia_folios', registro.id,
               None, registro.to_dict())
     db.session.commit()
-    flash('Folio transferido correctamente.', 'success')
+    flash('Folio transferido exitosamente.', 'success')
     return redirect(url_for('folios.details', id=folio.id))
 
 

@@ -33,7 +33,7 @@ def login():
         if user and user.check_password(form.password.data) and user.activo:
             login_user(user)
             session.permanent = True  # aplica PERMANENT_SESSION_LIFETIME (timeout de sesión)
-            flash('Sesión iniciada correctamente.', 'success')
+            flash('Sesión iniciada exitosamente.', 'success')
             next_page = request.args.get('next')
             if not _is_safe_next(next_page):
                 next_page = url_for('dashboard.index')
@@ -48,5 +48,5 @@ def login():
 @login_required
 def logout():
     logout_user()
-    flash('Sesión cerrada correctamente.', 'info')
+    flash('Sesión cerrada exitosamente.', 'info')
     return redirect(url_for('auth.login'))

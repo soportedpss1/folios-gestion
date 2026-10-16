@@ -157,7 +157,10 @@
     // mantener = true solo en la carga inicial (revalidación de un POST con
     // error): conserva las opciones que ya mandó el servidor. En cambios de
     // tipo o de centro la selección se limpia siempre.
+    // seq: respuesta fuera de orden (cambio rápido de centro/tipo) no pinta.
+    let seq = 0;
     function loadFolios(mantener) {
+        const t = ++seq;
         const centroId = centroSelect.value;
         const tipo = tipoSelect.value;
         const guardados = mantener ? seleccionados() : [];
@@ -186,6 +189,7 @@
         fetch(`/devoluciones/api/folios/${centroId}?tipo=${encodeURIComponent(tipo)}`)
             .then(r => r.json())
             .then(folios => {
+                if (t !== seq) return;
                 folioHint.style.display = 'none';
                 pintarFolios(folios, guardados);
                 if (folios.length === 0 && guardados.length === 0) {
@@ -193,6 +197,7 @@
                 }
             })
             .catch(() => {
+                if (t !== seq) return;
                 // Red caída o error del API: el spinner no debe quedarse pegado
                 // ni el select congelado en "Cargando folios...".
                 folioHint.style.display = 'block';

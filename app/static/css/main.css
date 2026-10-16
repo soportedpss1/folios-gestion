@@ -14,7 +14,6 @@ body {
 /* Anillo claro sobre superficies oscuras/primarias */
 .sidebar :focus-visible,
 .navbar :focus-visible,
-.modal-header :focus-visible,
 .btn-primary:focus-visible,
 .btn-dark:focus-visible {
     outline-color: #fff;
@@ -172,16 +171,6 @@ body {
 .sidebar::-webkit-scrollbar-corner,
 .table-responsive::-webkit-scrollbar-corner {
     background: transparent;
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .sidebar::-webkit-scrollbar-thumb,
-    .table-responsive::-webkit-scrollbar-thumb,
-    .modal-body::-webkit-scrollbar-thumb,
-    .overflow-auto::-webkit-scrollbar-thumb,
-    .overflow-y-auto::-webkit-scrollbar-thumb {
-        transition: none;
-    }
 }
 
 #page-content-wrapper {
@@ -394,13 +383,6 @@ body {
     margin: 0 2px;
 }
 
-.text-truncate-2 {
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-}
-
 /* ---------- Diálogos SweetAlert2 (tema de la app) ---------- */
 .swal2-popup {
     border-radius: 1rem !important;
@@ -474,20 +456,6 @@ body {
 
 [data-bs-theme="dark"] .swal2-cancel {
     border-color: #1E293B !important;
-}
-
-/* Skeleton de carga (tablas/gráficos) */
-.skeleton {
-    background: linear-gradient(90deg, #E2E8F0 25%, #F1F5F9 50%, #E2E8F0 75%);
-    background-size: 200% 100%;
-    animation: skeleton-shimmer 1.2s ease-in-out infinite;
-    border-radius: 0.375rem;
-    height: 1rem;
-}
-
-@keyframes skeleton-shimmer {
-    0% { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
 }
 
 /* ---------- Responsive ---------- */

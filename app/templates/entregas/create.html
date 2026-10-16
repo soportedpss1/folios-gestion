@@ -133,17 +133,24 @@
 
     // Folios disponibles contra /entregas/api/folios-disponibles.
     // Sin tipo de certificado no se piden folios; con tipo se piden todos.
+    // seq: si cambia el tipo mientras vuela el fetch, la respuesta vieja no
+    // debe pintar la lista (carrera de respuestas fuera de orden).
+    let seq = 0;
     async function loadFolios() {
+        const t = ++seq;
         const tipo = tipoSelect.value;
         if (!tipo) {
             hint.textContent = HINT_TIPO;
             return;
         }
         hint.textContent = HINT_OK;
+        hint.classList.remove('text-danger');
         try {
             const resp = await fetch(`{{ url_for('entregas.folios_disponibles') }}?tipo=${encodeURIComponent(tipo)}&limit=${LIMIT}`);
-            if (!resp.ok) return;
+            if (t !== seq) return;
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
             const items = await resp.json();
+            if (t !== seq) return;
             const seleccionados = Array.from(select.selectedOptions)
                 .map(o => ({ value: o.value, text: o.text }));
             select.innerHTML = '';
@@ -170,7 +177,11 @@
                 opt.selected = true;
                 select.appendChild(opt);
             }
-        } catch (e) { /* red caída: se mantiene el select actual */ }
+        } catch (e) {
+            if (t !== seq) return;
+            hint.classList.add('text-danger');
+            hint.textContent = 'Error al cargar los folios. Intente de nuevo.';
+        }
     }
 
     // Cambiar de tipo (incluido volver al placeholder) limpia lista y selección

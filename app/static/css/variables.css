@@ -2,11 +2,9 @@
     /* Paleta — design system "Data-Dense Dashboard" (ui-ux-pro-max) */
     --primary: #1E40AF;
     --primary-dark: #17358A;
-    --primary-darker: #162F73;
     --primary-rgb: 30, 64, 175;
     --secondary: #198754;
     --accent: #F59E0B;          /* CTA / anillo de foco */
-    --accent-rgb: 245, 158, 11;
     --danger: #dc3545;
     --warning: #ffc107;
     --info: #0dcaf0;
@@ -24,7 +22,6 @@
     --scrollbar-thumb: #64748B;        /* slate-500 */
     --scrollbar-thumb-hover: #94A3B8;  /* slate-400 */
     --scrollbar-track: transparent;
-    --sidebar-collapsed-width: 0px;
     --navbar-height: 56px;
     --card-shadow: 0 0.125rem 0.25rem rgba(15, 23, 42, 0.075);
     --transition-speed: 0.3s;
@@ -119,11 +116,6 @@
     --bs-table-active-color: #E2E8F0;
     --bs-table-hover-bg: #1E293B;
     --bs-table-hover-color: #E2E8F0;
-}
-
-[data-bs-theme="dark"] .skeleton {
-    background: linear-gradient(90deg, #1E293B 25%, #273449 50%, #1E293B 75%);
-    background-size: 200% 100%;
 }
 
 /* Sombras más tenues sobre fondo oscuro */

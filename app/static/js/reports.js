@@ -133,7 +133,11 @@
         });
     }
 
+    // seq: clics rápidos de paginación/filtrado → solo la última respuesta
+    // pinta la tabla y los stats.
+    let seq = 0;
     function loadData(page) {
+        const t = ++seq;
         const params = buildParams(page);
         currentParams = params.toString();
 
@@ -156,6 +160,7 @@
                 return r.json();
             })
             .then(data => {
+                if (t !== seq) return;
                 loadingSpinner.style.display = 'none';
                 tableContainer.style.display = '';
 
@@ -165,6 +170,7 @@
                 updateExportLinks(params);
             })
             .catch(err => {
+                if (t !== seq) return;
                 loadingSpinner.style.display = 'none';
                 tableContainer.style.display = 'none';
                 paginationContainer.innerHTML = '';

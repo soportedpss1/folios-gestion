@@ -96,7 +96,7 @@
                         <td>{{ folio.anioCert }}</td>
                     </tr>
                     <tr>
-                        <td class="text-muted">Rango ID</td>
+                        <td class="text-muted">Rango (id interno)</td>
                         <td>{{ folio.rangoId }}</td>
                     </tr>
                     <tr>
@@ -127,7 +127,7 @@
                     </tr>
                     <tr>
                         <td class="text-muted">Fecha Creación</td>
-                        <td>{{ (folio.createAt|localtime).strftime('%d/%m/%Y %H:%M') if folio.createAt else 'N/A' }}</td>
+                        <td>{{ (folio.createAt|localtime).strftime('%d/%m/%Y %H:%M') if folio.createAt else '-' }}</td>
                     </tr>
                 </table>
             </div>

@@ -132,6 +132,39 @@ def api_data():
     })
 
 
+# Columnas compartidas entre el PDF y el Excel del reporte: el mismo
+# reporte no puede cambiar de orden ni de contenido según el formato
+# (auditoría UI/UX: 12 columnas en Excel, 11 y otro orden en el PDF).
+COLUMNAS_REPORTE = [
+    'Folio', 'Tipo Certificado', 'Año', 'Centro', 'Estado',
+    'Digitado', 'Escaneado', 'Nulo',
+    'Fecha Entrega', 'Entregado por',
+    'Fecha Devolución', 'Recibido Por',
+]
+
+
+def fila_reporte(f):
+    """Valores de una fila en orden COLUMNAS_REPORTE; idénticos en PDF y Excel."""
+    entrega = f.entrega
+    devolucion = f.devolucion
+    return [
+        f.folio,
+        f.tipo_cert.name if f.tipo_cert else '',
+        f.anioCert,
+        entrega.centro.name if entrega and entrega.centro else '',
+        f.estado,
+        'Sí' if f.digitado else 'No',
+        'Sí' if f.escaneado else 'No',
+        'Sí' if f.nulo else 'No',
+        entrega.fechaEntrega.strftime('%d/%m/%Y')
+        if entrega and entrega.fechaEntrega else '-',
+        entrega.usuario.username if entrega and entrega.usuario else '-',
+        devolucion.fechaDevolucion.strftime('%d/%m/%Y')
+        if devolucion and devolucion.fechaDevolucion else '-',
+        devolucion.usuario.username if devolucion and devolucion.usuario else '-',
+    ]
+
+
 @reportes_bp.route('/export/excel')
 @login_required
 def export_excel():
@@ -151,12 +184,7 @@ def export_excel():
     ws = wb.active
     ws.title = f'Folios {anio or "Todos"}'
 
-    headers = [
-        'Folio', 'Tipo Certificado', 'Año', 'Centro', 'Estado',
-        'Digitado', 'Escaneado', 'Nulo',
-        'Fecha Entrega', 'Entregado por',
-        'Fecha Devolución', 'Recibido Por'
-    ]
+    headers = COLUMNAS_REPORTE
 
     header_font = Font(bold=True, color='FFFFFF')
     header_fill = PatternFill(start_color='0D6EFD', end_color='0D6EFD', fill_type='solid')
@@ -169,28 +197,8 @@ def export_excel():
         cell.alignment = header_align
 
     for row, f in enumerate(folios, 2):
-        ws.cell(row=row, column=1, value=f.folio)
-        ws.cell(row=row, column=2, value=f.tipo_cert.name if f.tipo_cert else '')
-        ws.cell(row=row, column=3, value=f.anioCert)
-        ws.cell(row=row, column=4, value=f.entrega.centro.name if f.entrega and f.entrega.centro else '')
-        ws.cell(row=row, column=5, value=f.estado)
-        ws.cell(row=row, column=6, value='Sí' if f.digitado else 'No')
-        ws.cell(row=row, column=7, value='Sí' if f.escaneado else 'No')
-        ws.cell(row=row, column=8, value='Sí' if f.nulo else 'No')
-
-        if f.entrega:
-            ws.cell(row=row, column=9, value=f.entrega.fechaEntrega.strftime('%d/%m/%Y') if f.entrega.fechaEntrega else '')
-            ws.cell(row=row, column=10, value=f.entrega.usuario.username if f.entrega.usuario else '')
-        else:
-            ws.cell(row=row, column=9, value='-')
-            ws.cell(row=row, column=10, value='-')
-
-        if f.devolucion:
-            ws.cell(row=row, column=11, value=f.devolucion.fechaDevolucion.strftime('%d/%m/%Y') if f.devolucion.fechaDevolucion else '')
-            ws.cell(row=row, column=12, value=f.devolucion.usuario.username if f.devolucion.usuario else '')
-        else:
-            ws.cell(row=row, column=11, value='-')
-            ws.cell(row=row, column=12, value='-')
+        for col, valor in enumerate(fila_reporte(f), 1):
+            ws.cell(row=row, column=col, value=valor)
 
     for col in ws.columns:
         max_length = max(len(str(cell.value or '')) for cell in col)
@@ -222,6 +230,7 @@ def export_pdf():
     folios = query.order_by(Folio.folio, Folio.id).all()
 
     encabezado = encabezado_pdf(f'Reporte de Folios - Año {anio or "Todos"}')
+    thead = ''.join(f'<th>{columna}</th>' for columna in COLUMNAS_REPORTE)
     html_content = f"""
     <!DOCTYPE html>
     <html>
@@ -245,46 +254,16 @@ def export_pdf():
         <p class="date">Generado: {datetime.now().strftime('%d/%m/%Y %H:%M')}</p>
         <table>
             <thead>
-                <tr>
-                    <th>Folio</th>
-                    <th>Tipo Certificado</th>
-                    <th>Estado</th>
-                    <th>Centro</th>
-                    <th>Digitado</th>
-                    <th>Escaneado</th>
-                    <th>Nulo</th>
-                    <th>Fecha Entrega</th>
-                    <th>Entregado por</th>
-                    <th>Fecha Devolución</th>
-                    <th>Recibido Por</th>
-                </tr>
+                <tr>{thead}</tr>
             </thead>
             <tbody>
     """
 
     filas = []
     for f in folios:
-        fecha_entrega = f.entrega.fechaEntrega.strftime('%d/%m/%Y') if f.entrega and f.entrega.fechaEntrega else '-'
-        usuario_entrega = f.entrega.usuario.username if f.entrega and f.entrega.usuario else '-'
-        centro = f.entrega.centro.name if f.entrega and f.entrega.centro else '-'
-        fecha_devolucion = f.devolucion.fechaDevolucion.strftime('%d/%m/%Y') if f.devolucion and f.devolucion.fechaDevolucion else '-'
-        usuario_devolucion = f.devolucion.usuario.username if f.devolucion and f.devolucion.usuario else '-'
-
-        filas.append(f"""
-                <tr>
-                    <td>{f.folio}</td>
-                    <td>{escape(f.tipo_cert.name) if f.tipo_cert else ''}</td>
-                    <td>{escape(f.estado)}</td>
-                    <td>{escape(centro)}</td>
-                    <td>{'Si' if f.digitado else 'No'}</td>
-                    <td>{'Si' if f.escaneado else 'No'}</td>
-                    <td>{'Si' if f.nulo else 'No'}</td>
-                    <td>{fecha_entrega}</td>
-                    <td>{escape(usuario_entrega)}</td>
-                    <td>{fecha_devolucion}</td>
-                    <td>{escape(usuario_devolucion)}</td>
-                </tr>
-        """)
+        filas.append('<tr>' + ''.join(
+            f'<td>{escape(str(valor))}</td>' for valor in fila_reporte(f))
+            + '</tr>')
 
     html_content += ''.join(filas)
     html_content += """
