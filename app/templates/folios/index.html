@@ -194,7 +194,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-primary" onclick="saveStatus()">
+                <button type="button" class="btn btn-primary" id="btn-save-status" onclick="saveStatus()">
                     <i class="fas fa-save me-1"></i>Guardar
                 </button>
             </div>
@@ -217,6 +217,17 @@
     }
 
     function saveStatus() {
+        const btn = document.getElementById('btn-save-status');
+        if (btn.disabled) return;  // anti doble clic: el primer POST sigue en vuelo
+        const htmlOriginal = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Guardando...';
+
+        const restaurar = () => {
+            btn.disabled = false;
+            btn.innerHTML = htmlOriginal;
+        };
+
         const digitado = document.getElementById('modal-digitado').checked;
         const escaneado = document.getElementById('modal-escaneado').checked;
         const nulo = document.getElementById('modal-nulo').checked;
@@ -233,17 +244,22 @@
                 nulo: nulo
             })
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) throw new Error('HTTP ' + response.status);
+            return response.json();
+        })
         .then(data => {
             if (data.success) {
                 AppToast.mostrar(data.message, 'success');
                 setTimeout(() => location.reload(), 1600);
             } else {
                 AppToast.mostrar(data.message, 'danger');
+                restaurar();
             }
         })
         .catch(() => {
             AppToast.mostrar('Error de conexión.', 'danger');
+            restaurar();
         });
     }
 

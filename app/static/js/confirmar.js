@@ -29,8 +29,39 @@ document.addEventListener('submit', function (evento) {
             confirmButton: destructiva ? 'swal-confirm-danger' : '',
         },
     }).then(function (resultado) {
-        if (resultado.isConfirmed) {
-            HTMLFormElement.prototype.submit.call(form);
+        if (!resultado.isConfirmed) return;
+        // Feedback anti doble submit también en forms sin data-loading: el
+        // submit nativo no vuelve a disparar listeners de 'submit'.
+        const btn = form.querySelector('[type="submit"]');
+        if (btn && !btn.disabled) {
+            const spin = document.createElement('span');
+            spin.className = 'spinner-border spinner-border-sm me-1 spinner-envio';
+            spin.setAttribute('role', 'status');
+            spin.setAttribute('aria-hidden', 'true');
+            if (btn.tagName === 'INPUT') {
+                btn.dataset.originalValue = btn.value;
+                btn.value = 'Enviando…';
+                btn.disabled = true;
+                btn.parentNode.insertBefore(spin, btn);
+            } else {
+                btn.dataset.originalHtml = btn.innerHTML;
+                btn.disabled = true;
+                btn.insertBefore(spin, btn.firstChild);
+            }
+            // Back tras el POST (bfcache): devolver el botón a su estado.
+            window.addEventListener('pageshow', function restaurar(ev) {
+                if (!ev.persisted) return;
+                window.removeEventListener('pageshow', restaurar);
+                btn.disabled = false;
+                if (btn.tagName === 'INPUT' && btn.dataset.originalValue !== undefined) {
+                    btn.value = btn.dataset.originalValue;
+                } else if (btn.dataset.originalHtml !== undefined) {
+                    btn.innerHTML = btn.dataset.originalHtml;
+                }
+                const viejo = form.querySelector('.spinner-envio');
+                if (viejo) viejo.remove();
+            });
         }
+        HTMLFormElement.prototype.submit.call(form);
     });
 });

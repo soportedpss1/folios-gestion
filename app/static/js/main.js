@@ -178,9 +178,17 @@ document.addEventListener('DOMContentLoaded', function() {
     if (csrfToken) {
         const originalFetch = window.fetch;
         window.fetch = function(url, options = {}) {
-            options.headers = options.headers || {};
             if (!(options.body instanceof FormData)) {
-                options.headers['X-CSRFToken'] = csrfToken;
+                // Soportar Headers/array además de objeto plano: asignar una
+                // propiedad a una instancia Headers no añade la cabecera.
+                if (options.headers instanceof Headers) {
+                    options.headers.set('X-CSRFToken', csrfToken);
+                } else if (Array.isArray(options.headers)) {
+                    options.headers.push(['X-CSRFToken', csrfToken]);
+                } else {
+                    options.headers = Object.assign({}, options.headers);
+                    options.headers['X-CSRFToken'] = csrfToken;
+                }
             }
             return originalFetch(url, options);
         };
@@ -285,6 +293,12 @@ document.addEventListener('DOMContentLoaded', function() {
     // (WTForms) y <button>, y restaura el estado si el navegador restaura la
     // página desde bfcache (Back tras un POST).
     document.querySelectorAll('form[data-loading]').forEach(function(form) {
+        // Con data-confirm el flujo lo maneja confirmar.js (SweetAlert): si
+        // este listener bloqueara el botón en el submit inicial, cancelar el
+        // diálogo dejaría el form trabado (botón muerto, spinner pegado).
+        // El bloqueo lo aplica confirmar.js justo antes del submit nativo.
+        if (form.hasAttribute('data-confirm')) return;
+
         const btn = form.querySelector('[type="submit"]');
 
         function restaurar() {

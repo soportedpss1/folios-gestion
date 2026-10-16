@@ -34,7 +34,7 @@
                     fila en el archivo (columna obligatoria <code>fecha</code>,
                     formato dd/mm/aaaa).
                 </p>
-                <form method="POST" enctype="multipart/form-data">
+                <form method="POST" enctype="multipart/form-data" data-loading>
                     {{ form.hidden_tag() }}
                     <div class="row g-3">
                         <div class="col-md-8">
@@ -114,11 +114,11 @@
                 </div>
 
                 {% if total_validas %}
-                <form method="POST" action="{{ url_for('entregas.importar_confirmar') }}">
+                <form method="POST" action="{{ url_for('entregas.importar_confirmar') }}" data-loading>
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="payload" value="{{ payload_json }}">
                     <div class="d-flex justify-content-end gap-2">
-                        <a href="{{ url_for('entregas.importar') }}" class="btn btn-outline-secondary">Cancelar</a>
+                        <a href="{{ url_for('entregas.index') }}" class="btn btn-outline-secondary">Cancelar</a>
                         <button type="submit" class="btn btn-success">
                             <i class="fas fa-file-import me-1"></i>Confirmar importación
                         </button>

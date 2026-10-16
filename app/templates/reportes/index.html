@@ -37,7 +37,7 @@
                 <select name="tipoCert" class="form-select form-select-sm">
                     <option value="">Todos</option>
                     {% for t in tipos %}
-                        <option value="{{ t.id }}">{{ t.name }}</option>
+                        <option value="{{ t.id }}" {% if current_tipo == t.id %}selected{% endif %}>{{ t.name }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -46,7 +46,7 @@
                 <select name="centroId" class="form-select form-select-sm">
                     <option value="">Todos</option>
                     {% for c in centros %}
-                        <option value="{{ c.id }}">{{ c.name }}</option>
+                        <option value="{{ c.id }}" {% if current_centro == c.id %}selected{% endif %}>{{ c.name }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -54,11 +54,11 @@
                 <label class="form-label small fw-semibold">Estado</label>
                 <select name="estado" class="form-select form-select-sm">
                     <option value="">Todos</option>
-                    <option value="disponible">Disponible</option>
-                    <option value="entregado">Entregado</option>
-                    <option value="devuelto">Devuelto</option>
-                    <option value="perdido">Perdido</option>
-                    <option value="nulo">Nulo</option>
+                    <option value="disponible" {% if current_estado == 'disponible' %}selected{% endif %}>Disponible</option>
+                    <option value="entregado" {% if current_estado == 'entregado' %}selected{% endif %}>Entregado</option>
+                    <option value="devuelto" {% if current_estado == 'devuelto' %}selected{% endif %}>Devuelto</option>
+                    <option value="perdido" {% if current_estado == 'perdido' %}selected{% endif %}>Perdido</option>
+                    <option value="nulo" {% if current_estado == 'nulo' %}selected{% endif %}>Nulo</option>
                 </select>
             </div>
             <div class="col-md-2">

@@ -56,17 +56,10 @@
                     </tr>
                     {% else %}
                     <tr>
-                        <td class="text-center text-muted py-4" colspan="5">
+                        <td class="text-center text-muted py-4" colspan="{{ 6 if puede('devoluciones.gestionar') else 5 }}">
                             <i class="fas fa-undo fa-2x mb-2 d-block"></i>
                             No hay devoluciones registradas
                         </td>
-                        {% if puede('devoluciones.gestionar') %}
-                        <td style="padding:0;width:0"></td>
-                        {% endif %}
-                        <td style="padding:0;width:0"></td>
-                        <td style="padding:0;width:0"></td>
-                        <td style="padding:0;width:0"></td>
-                        <td style="padding:0;width:0"></td>
                     </tr>
                     {% endfor %}
                 </tbody>

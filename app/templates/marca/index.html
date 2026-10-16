@@ -16,7 +16,7 @@
                 <i class="fas fa-font me-2 text-primary"></i>Textos
             </div>
             <div class="card-body">
-                <form method="POST" action="{{ url_for('marca.guardar') }}" enctype="multipart/form-data">
+                <form method="POST" action="{{ url_for('marca.guardar') }}" enctype="multipart/form-data" data-loading>
                     {{ form.hidden_tag() }}
 
                     <div class="mb-3">

@@ -52,7 +52,7 @@
                 </div>
 
                 <form method="POST" action="{{ url_for('backup.analizar') }}"
-                      enctype="multipart/form-data">
+                      enctype="multipart/form-data" data-loading>
                     {{ form.hidden_tag() }}
 
                     <div class="mb-3">
@@ -90,7 +90,7 @@
         {% endif %}
 
         <div class="table-responsive">
-            <table class="table table-sm align-middle mb-3">
+            <table class="table table-hover table-sm align-middle mb-3">
                 <thead>
                     <tr>
                         <th>Tabla</th>

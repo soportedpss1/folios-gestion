@@ -192,7 +192,13 @@
                     folioVacio.style.display = 'block';
                 }
             })
-            .catch(() => { /* red caída: se mantiene el select actual */ });
+            .catch(() => {
+                // Red caída o error del API: el spinner no debe quedarse pegado
+                // ni el select congelado en "Cargando folios...".
+                folioHint.style.display = 'block';
+                folioHint.innerHTML = '<i class="fas fa-exclamation-triangle text-danger me-1"></i>'
+                    + 'Error al cargar los folios. Intente de nuevo.';
+            });
     }
 
     function recargarSinSeleccion() {

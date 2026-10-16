@@ -5,6 +5,7 @@
 {% block content %}
 {% set modo = modo|default('digitado') %}
 {% set confirm_url = url_for('folios.importar_nulos_confirmar') if modo == 'nulo' else url_for('folios.importar_confirmar') %}
+{% set cancel_url = url_for('folios.importar_nulos') if modo == 'nulo' else url_for('folios.importar') %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h4 class="fw-bold mb-0">
         <i class="fas fa-file-import me-2 text-primary"></i>{{ 'Validar Nulos' if modo == 'nulo' else 'Importar Folios' }}
@@ -31,7 +32,7 @@
                     puede repetirse entre años/tipos: se marcan todas las
                     coincidencias.
                 </p>
-                <form method="POST" enctype="multipart/form-data">
+                <form method="POST" enctype="multipart/form-data" data-loading>
                     {{ form.hidden_tag() }}
                     <div class="row g-3 align-items-end">
                         <div class="col-md-8">
@@ -96,11 +97,11 @@
                 </div>
 
                 {% if total_validas %}
-                <form method="POST" action="{{ confirm_url }}">
+                <form method="POST" action="{{ confirm_url }}" data-loading>
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="payload" value="{{ payload_json }}">
                     <div class="d-flex justify-content-end gap-2">
-                        <a href="{{ url_for('folios.importar') }}" class="btn btn-outline-secondary">Cancelar</a>
+                        <a href="{{ cancel_url }}" class="btn btn-outline-secondary">Cancelar</a>
                         <button type="submit" class="btn btn-success">
                             <i class="fas fa-file-import me-1"></i>Confirmar importación
                         </button>

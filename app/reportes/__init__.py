@@ -75,9 +75,11 @@ def index():
         tipos=tipos,
         centros=centros,
         current_anio=current_anio,
-        current_tipo=None,
-        current_centro=None,
-        current_estado=None
+        # El form es GET: al recargar hay que respetar lo elegido en TODOS los
+        # selects (antes solo el año; tipo/centro/estado se perdían en "Todos").
+        current_tipo=request.args.get('tipoCert', type=int),
+        current_centro=request.args.get('centroId', type=int),
+        current_estado=request.args.get('estado') or None
     )
 
 

@@ -94,6 +94,8 @@
                                 <span class="badge bg-warning text-dark">{{ log.accion }}</span>
                             {% elif log.accion == 'DELETE' %}
                                 <span class="badge bg-danger">{{ log.accion }}</span>
+                            {% else %}
+                                <span class="badge bg-secondary">{{ log.accion }}</span>
                             {% endif %}
                         </td>
                         <td><code>{{ log.tabla }}</code></td>

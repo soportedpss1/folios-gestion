@@ -137,6 +137,11 @@
         const params = buildParams(page);
         currentParams = params.toString();
 
+        // Dejar los filtros en la URL: F5 y el botón "atrás" conservan lo
+        // elegido (el server pinta los selects con selected desde request.args).
+        const qs = params.toString();
+        history.replaceState(null, '', qs ? '?' + qs : location.pathname);
+
         emptyState.style.display = 'none';
         loadingSpinner.style.display = '';
         tableContainer.style.display = 'none';
@@ -144,7 +149,12 @@
         tableSearch.value = '';
 
         fetch('/reportes/api/data?' + params.toString())
-            .then(r => r.json())
+            .then(r => {
+                // Sin !r.ok, un 429/500 caía en r.json() y se mostraba el
+                // emptyState genérico como si no hubiera resultados.
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                return r.json();
+            })
             .then(data => {
                 loadingSpinner.style.display = 'none';
                 tableContainer.style.display = '';
@@ -154,10 +164,16 @@
                 renderPagination(data.pagination, params);
                 updateExportLinks(params);
             })
-            .catch(() => {
+            .catch(err => {
                 loadingSpinner.style.display = 'none';
+                tableContainer.style.display = 'none';
+                paginationContainer.innerHTML = '';
+                // Error visible en vez del emptyState de "use los filtros",
+                // y la fila de error no queda escondida dentro de la tabla.
+                emptyState.innerHTML = '<i class="fas fa-exclamation-triangle fa-3x text-danger mb-3"></i>'
+                    + '<p class="text-danger mb-1 fw-semibold">Error al cargar los datos</p>'
+                    + '<p class="text-muted small mb-0">' + escapeHtml(err && err.message) + '</p>';
                 emptyState.style.display = '';
-                reportesBody.innerHTML = '<tr><td colspan="12" class="text-center text-danger py-4">Error al cargar datos</td></tr>';
             });
     }
 
