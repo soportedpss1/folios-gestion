@@ -362,7 +362,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const tooltips = document.querySelectorAll('[title]');
     tooltips.forEach(el => {
-        new bootstrap.Tooltip(el);
+        // Bootstrap vino por CDN: sin él el resto del handler debe seguir.
+        if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
+            new bootstrap.Tooltip(el);
+        }
     });
 
     // Cuenta atrás de la próxima sincronización automática (navbar).

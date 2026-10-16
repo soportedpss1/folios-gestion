@@ -97,14 +97,12 @@
         </li>
         {% endif %}
 
-        {% if current_user.is_admin() or current_user.is_operador() or puede('centros.gestionar') %}
         <li class="nav-item mb-1">
             <a class="nav-link text-white-50 {% if request.endpoint and 'centros' in request.endpoint %}active{% endif %}"
                href="{{ url_for('centros.index') }}">
                 <i class="fas fa-hospital me-2"></i> Centros
             </a>
         </li>
-        {% endif %}
 
         {% if puede('certificados.gestionar') %}
         <li class="nav-item mb-1">

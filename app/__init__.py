@@ -234,14 +234,21 @@ def render_error(code, title, message):
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>{{ title }} - {{ marca_titulo }}</title>
+        <script>
+            // Mismo tema que la app: sin esto la 404/500 destella en claro.
+            try {
+                var temaGuardado = localStorage.getItem('folios-tema');
+                if (temaGuardado) document.documentElement.setAttribute('data-bs-theme', temaGuardado);
+            } catch (e) { /* sin localStorage: tema claro por defecto */ }
+        </script>
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
     </head>
-    <body class="bg-light d-flex align-items-center justify-content-center" style="min-height:100vh;">
+    <body class="d-flex align-items-center justify-content-center" style="min-height:100vh;">
         <div class="text-center">
             <h1 class="display-1 fw-bold text-primary">{{ code }}</h1>
             <h3 class="mb-3">{{ title }}</h3>
             <p class="text-muted mb-4">{{ message }}</p>
-            <a href="/" class="btn btn-primary">Volver al Inicio</a>
+            <a href="{{ url_for('main.index') }}" class="btn btn-primary">Volver al Inicio</a>
         </div>
     </body>
     </html>

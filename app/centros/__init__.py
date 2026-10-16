@@ -368,7 +368,7 @@ def export_lista_pdf():
 
     centros = Centro.query.order_by(Centro.name).all()
 
-    encabezado = encabezado_pdf('Gestion de Centros de Salud')
+    encabezado = encabezado_pdf('Gestión de Centros de Salud')
     html_content = f"""
     <!DOCTYPE html>
     <html>
@@ -395,8 +395,8 @@ def export_lista_pdf():
                 <tr>
                     <th>#</th>
                     <th>Nombre</th>
-                    <th>Telefono</th>
-                    <th>Direccion</th>
+                    <th>Teléfono</th>
+                    <th>Dirección</th>
                     <th>Estado</th>
                 </tr>
             </thead>
@@ -607,19 +607,19 @@ def export_pdf(id):
 
     secciones = {
         'pendientes': seccion_pdf(
-            'Pendientes de Devolucion', len(pendientes),
+            'Pendientes de Devolución', len(pendientes),
             ['Folio', 'Tipo Certificado', 'Fecha Entrega', 'Entregado por',
-             'Dias en Centro'],
+             'Días en Centro'],
             build_pendientes_rows()),
         'todos': seccion_pdf(
             'Todos Entregados', len(entregas),
             ['Folio', 'Tipo Certificado', 'Estado', 'F. Entrega',
-             'Entregado por', 'F. Devolucion', 'Recibido Por'],
+             'Entregado por', 'F. Devolución', 'Recibido Por'],
             build_entregas_rows()),
         'devueltos': seccion_pdf(
             'Devueltos', len(devueltos),
-            ['Folio', 'Tipo Certificado', 'F. Entrega', 'F. Devolucion',
-             'Recibido Por', 'Dias en Centro'],
+            ['Folio', 'Tipo Certificado', 'F. Entrega', 'F. Devolución',
+             'Recibido Por', 'Días en Centro'],
             build_devueltos_rows()),
     }
     # vista → solo esa sección; sin vista → las 3 (export completo, como siempre).
@@ -648,15 +648,15 @@ def export_pdf(id):
     </head>
     <body>
         {logo}
-        <h1>Direccion Provincial de Salud Santiago 1</h1>
+        <h1>Dirección Provincial de Salud Santiago 1</h1>
         <h2>Departamento de Bioestadistica</h2>
         <h3>Detalle del Centro: {escape(centro.name)}</h3>
         <p style="color:#666; font-size:10px; text-align:right;">Generado: {datetime.now().strftime('%d/%m/%Y %H:%M')}</p>
 
         <table class="info-table">
             <tr><td>Nombre:</td><td>{escape(centro.name)}</td></tr>
-            <tr><td>Telefono:</td><td>{escape(centro.telefono) if centro.telefono else '-'}</td></tr>
-            <tr><td>Direccion:</td><td>{escape(centro.direccion) if centro.direccion else '-'}</td></tr>
+            <tr><td>Teléfono:</td><td>{escape(centro.telefono) if centro.telefono else '-'}</td></tr>
+            <tr><td>Dirección:</td><td>{escape(centro.direccion) if centro.direccion else '-'}</td></tr>
         </table>
 
         {cuerpo}

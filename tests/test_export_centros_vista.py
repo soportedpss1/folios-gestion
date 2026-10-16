@@ -128,7 +128,7 @@ def test_pdf_vista_pendientes_solo_su_seccion(
     assert resp.status_code == 200
     assert len(fake.captured) == 1
     html = fake.captured[0]
-    assert 'Pendientes de Devolucion' in html
+    assert 'Pendientes de Devolución' in html
     assert '<td>7001</td>' in html, 'fila del pendiente ausente'
     assert 'Todos Entregados (' not in html, 'no debe incluir la sección Todos'
     assert 'Devueltos (' not in html, 'no debe incluir la sección Devueltos'
@@ -146,7 +146,7 @@ def test_pdf_vista_devueltos_solo_su_seccion(
     html = fake.captured[0]
     assert 'Devueltos (' in html
     assert '<td>7002</td>' in html, 'fila del devuelto ausente'
-    assert 'Pendientes de Devolucion' not in html
+    assert 'Pendientes de Devolución' not in html
     assert 'Todos Entregados (' not in html
 
 
@@ -161,7 +161,7 @@ def test_pdf_sin_vista_incluye_las_tres_secciones(
     resp = auth_client.get(f'/centros/{centro.id}/export/pdf')
     assert resp.status_code == 200
     html = fake.captured[0]
-    assert 'Pendientes de Devolucion' in html
+    assert 'Pendientes de Devolución' in html
     assert 'Todos Entregados (' in html
     assert 'Devueltos (' in html
 

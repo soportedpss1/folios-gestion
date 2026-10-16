@@ -221,7 +221,7 @@ def export_pdf():
     query = _add_eager_loading(query)
     folios = query.order_by(Folio.folio, Folio.id).all()
 
-    encabezado = encabezado_pdf(f'Reporte de Folios - Ano {anio or "Todos"}')
+    encabezado = encabezado_pdf(f'Reporte de Folios - Año {anio or "Todos"}')
     html_content = f"""
     <!DOCTYPE html>
     <html>
@@ -255,7 +255,7 @@ def export_pdf():
                     <th>Nulo</th>
                     <th>Fecha Entrega</th>
                     <th>Entregado por</th>
-                    <th>Fecha Devolucion</th>
+                    <th>Fecha Devolución</th>
                     <th>Recibido Por</th>
                 </tr>
             </thead>

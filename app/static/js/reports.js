@@ -188,4 +188,8 @@
             row.style.display = row.textContent.toLowerCase().includes(text) ? '' : 'none';
         });
     });
+
+    // F5 / botón atrás con filtros en la URL: los selects ya vienen marcados
+    // desde el server; hay que recargar la tabla y los stats.
+    if (window.location.search) loadData(1);
 })();

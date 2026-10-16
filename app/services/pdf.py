@@ -30,7 +30,7 @@ def encabezado_pdf(titulo):
     return f'''
         <div class="header">
             {logo_pdf()}
-            <h1>Direccion Provincial de Salud Santiago 1</h1>
+            <h1>Dirección Provincial de Salud Santiago 1</h1>
             <h2>Departamento de Bioestadistica</h2>
             <h3>{titulo}</h3>
         </div>'''

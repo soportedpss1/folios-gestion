@@ -190,7 +190,7 @@ def export_pdf():
 
     recepciones = _recepciones_para_exportar()
 
-    encabezado = encabezado_pdf('Recepcion de Folios')
+    encabezado = encabezado_pdf('Recepción de Folios')
     html_content = f"""
     <!DOCTYPE html>
     <html>
@@ -217,7 +217,7 @@ def export_pdf():
                 <tr>
                     <th>#</th>
                     <th>Fecha</th>
-                    <th>Ano Cert.</th>
+                    <th>Año Cert.</th>
                     <th>Tipo</th>
                     <th>Folio Inicial</th>
                     <th>Folio Final</th>

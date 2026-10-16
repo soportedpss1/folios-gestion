@@ -12,6 +12,9 @@ document.addEventListener('submit', function (evento) {
     if (!(form instanceof HTMLFormElement) || !form.hasAttribute('data-confirm')) {
         return;
     }
+    // SweetAlert2 vino por CDN: si no cargó, no bloquear el envío — el form
+    // se envía nativamente sin diálogo (mejor que dejar el botón muerto).
+    if (typeof Swal === 'undefined') return;
     evento.preventDefault();
     const icono = form.getAttribute('data-icon') || 'warning';
     const destructiva = icono === 'danger' ||

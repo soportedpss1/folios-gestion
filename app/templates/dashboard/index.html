@@ -71,7 +71,7 @@
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-hover mb-0 data-table">
+                    <table class="table table-hover mb-0">
                         <thead class="table-light">
                             <tr>
                                 <th>Folio</th>
@@ -88,7 +88,10 @@
                             </tr>
                             {% else %}
                             <tr>
-                                <td class="text-center text-muted py-3" colspan="3">No hay entregas registradas</td>
+                                <td class="text-center text-muted py-3" colspan="3">
+                                    <i class="fas fa-paper-plane fa-2x mb-2 d-block"></i>
+                                    No hay entregas registradas
+                                </td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -107,7 +110,7 @@
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-hover mb-0 data-table">
+                    <table class="table table-hover mb-0">
                         <thead class="table-light">
                             <tr>
                                 <th>Folio</th>
@@ -124,7 +127,10 @@
                             </tr>
                             {% else %}
                             <tr>
-                                <td class="text-center text-muted py-3" colspan="3">No hay devoluciones registradas</td>
+                                <td class="text-center text-muted py-3" colspan="3">
+                                    <i class="fas fa-undo fa-2x mb-2 d-block"></i>
+                                    No hay devoluciones registradas
+                                </td>
                             </tr>
                             {% endfor %}
                         </tbody>

@@ -115,7 +115,7 @@ def test_encabezado_pdf_con_logo(app):
     html = encabezado_pdf('Titulo Prueba')
     assert 'data:image/png;base64' in html
     assert '<h3>Titulo Prueba</h3>' in html
-    assert 'Direccion Provincial de Salud Santiago 1' in html
+    assert 'Dirección Provincial de Salud Santiago 1' in html
 
 
 def test_encabezado_pdf_sin_logo(app):
