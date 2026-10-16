@@ -6,13 +6,16 @@ from sqlalchemy import String, cast
 from sqlalchemy.orm import selectinload
 from app.decorators import permiso_requerido
 from app.extensions import db
-from app.folios.forms import ComentarioFolioForm, ImportarFolioForm
+from app.folios.forms import ComentarioFolioForm, ImportarFolioForm, TransferirFolioForm
+from app.models.centro import Centro
 from app.models.folio import Folio
 from app.models.folio_comentario import FolioComentario
 from app.models.tipo_certificado import TipoCertificado
+from app.models.transferencia_folio import TransferenciaFolio
 from app.services import import_excel
 from app.services.audit import log_audit
 from app.services.escaneos import validar_carpeta
+from app.services.movimientos import choices_centros
 from app.services.permisos import puede
 from app.services.queries import get_or_404
 from app.utils import plural
@@ -77,20 +80,42 @@ def details(id):
     return render_template('folios/details.html', **_contexto_detalle(folio))
 
 
-def _contexto_detalle(folio, form=None):
-    """Datos del detalle: folio, form de comentario y historial (más reciente
-    primero, con autor eager-loaded para evitar N+1)."""
+def _contexto_detalle(folio, form=None, form_transfer=None):
+    """Datos del detalle: folio, form de comentario, form de transferencia y
+    historiales (comentarios y transferencias, más recientes primero, con
+    relaciones eager-loaded para evitar N+1)."""
     comentarios = (FolioComentario.query
                    .filter_by(folio_id=folio.id)
                    .options(selectinload(FolioComentario.usuario))
                    .order_by(FolioComentario.createAt.desc(),
                              FolioComentario.id.desc())
                    .all())
+    transferencias = (TransferenciaFolio.query
+                      .filter_by(folio_id=folio.id)
+                      .options(selectinload(TransferenciaFolio.centro_origen),
+                               selectinload(TransferenciaFolio.centro_destino),
+                               selectinload(TransferenciaFolio.usuario))
+                      .order_by(TransferenciaFolio.fecha.desc(),
+                                TransferenciaFolio.id.desc())
+                      .all())
+    if form_transfer is None:
+        form_transfer = TransferirFolioForm()
+    if folio.entrega:
+        form_transfer.centroDestino.choices = _choices_destino(folio.entrega.centroId)
     return {
         'folio': folio,
         'form': form or ComentarioFolioForm(),
+        'form_transfer': form_transfer,
         'comentarios': comentarios,
+        'transferencias': transferencias,
     }
+
+
+def _choices_destino(actual_id):
+    """Centros activos para el destino, sin el centro actual del folio."""
+    return [(cid, nombre) for cid, nombre
+            in choices_centros(None, placeholder='Seleccione el centro destino…')
+            if cid and cid != actual_id]
 
 
 @folios_bp.route('/<int:id>/comentarios', methods=['POST'])
@@ -274,6 +299,90 @@ def recuperar(id):
     db.session.commit()
     flash('Folio recuperado.', 'success')
     return redirect(url_for('folios.details', id=folio.id))
+
+
+# --- transferencia entre centros de salud ---
+
+@folios_bp.route('/<int:id>/transferir', methods=['POST'])
+@permiso_requerido('folios.transferir', hacia='blueprint')
+def transferir(id):
+    """Pasa un folio entregado de un centro a otro, con motivo obligatorio.
+
+    Cambia el centro de la EntregaFolio activa y deja registro inmutable en
+    transferencia_folios + audit (UPDATE entrega_folios, INSERT transferencia).
+    """
+    folio = get_or_404(Folio, id)
+    if folio.estado != 'entregado' or folio.entrega is None:
+        flash('Solo se pueden transferir folios entregados.', 'danger')
+        return redirect(url_for('folios.details', id=folio.id))
+
+    form = TransferirFolioForm()
+    form.centroDestino.choices = _choices_destino(folio.entrega.centroId)
+    if not form.validate_on_submit():
+        # Re-render del detalle con los errores (destino inválido / sin motivo).
+        return render_template('folios/details.html',
+                               **_contexto_detalle(folio, form_transfer=form))
+
+    centro_origen = folio.entrega.centroId
+    centro_destino = form.centroDestino.data
+    old = {'centroId': centro_origen}
+    folio.entrega.centroId = centro_destino
+    registro = TransferenciaFolio(
+        folio_id=folio.id,
+        centroOrigenId=centro_origen,
+        centroDestinoId=centro_destino,
+        userId=current_user.id,
+        motivo=form.motivo.data.strip(),
+    )
+    db.session.add(registro)
+    db.session.flush()
+    log_audit(current_user.id, 'UPDATE', 'entrega_folios', folio.entrega.id,
+              old, {'centroId': centro_destino})
+    log_audit(current_user.id, 'INSERT', 'transferencia_folios', registro.id,
+              None, registro.to_dict())
+    db.session.commit()
+    flash('Folio transferido correctamente.', 'success')
+    return redirect(url_for('folios.details', id=folio.id))
+
+
+@folios_bp.route('/transferencias')
+@login_required
+def transferencias():
+    """Seguimiento global de transferencias (paginado, con filtros)."""
+    query = TransferenciaFolio.query.options(
+        selectinload(TransferenciaFolio.folio),
+        selectinload(TransferenciaFolio.centro_origen),
+        selectinload(TransferenciaFolio.centro_destino),
+        selectinload(TransferenciaFolio.usuario),
+    )
+
+    origen = request.args.get('origen', type=int)
+    destino = request.args.get('destino', type=int)
+    busqueda = request.args.get('busqueda', '').strip()[:50]
+
+    if origen:
+        query = query.filter(TransferenciaFolio.centroOrigenId == origen)
+    if destino:
+        query = query.filter(TransferenciaFolio.centroDestinoId == destino)
+    if busqueda:
+        query = (query.join(Folio, Folio.id == TransferenciaFolio.folio_id)
+                    .filter(cast(Folio.folio, String).like(f'%{busqueda}%')))
+
+    page = request.args.get('page', 1, type=int)
+    per_page = min(max(request.args.get('per_page', 25, type=int), 1), 200)
+    pagination = query.order_by(TransferenciaFolio.fecha.desc(),
+                                TransferenciaFolio.id.desc()) \
+                      .paginate(page=page, per_page=per_page, error_out=False)
+
+    centros = Centro.query.order_by(Centro.name).all()
+    return render_template('folios/transferencias.html',
+        pagination=pagination,
+        transferencias=pagination.items,
+        centros=centros,
+        current_origen=origen,
+        current_destino=destino,
+        current_busqueda=busqueda,
+    )
 
 
 def _preview_flag(filas, attr):

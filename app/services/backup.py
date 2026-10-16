@@ -39,6 +39,7 @@ TABLAS_ORDEN = (
     # Hijos de folios/usuarios (FK sin ON DELETE): se insertan después de
     # ambos y se borran antes, o la restauración revienta con errno 1451.
     'folio_comentarios',
+    'transferencia_folios',
     'audit_logs',
     'permiso_usuarios',
     'sync_config',

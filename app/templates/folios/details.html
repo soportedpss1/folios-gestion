@@ -31,6 +31,42 @@
             </form>
             {% endif %}
         {% endif %}
+        {% if puede('folios.transferir') and folio.estado == 'entregado' %}
+        <details class="d-inline" {% if form_transfer.errors %}open{% endif %}>
+            <summary class="btn btn-outline-primary" style="cursor:pointer;">
+                <i class="fas fa-exchange-alt me-1" aria-hidden="true"></i>Transferir
+            </summary>
+            <div class="card border-primary shadow mt-2" style="min-width: 320px;">
+                <div class="card-body py-3">
+                    <p class="small text-muted mb-2">
+                        Pasa este folio de <strong>{{ folio.entrega.centro.name }}</strong>
+                        a otro centro de salud. El motivo es obligatorio.
+                    </p>
+                    <form method="POST" action="{{ url_for('folios.transferir', id=folio.id) }}"
+                          data-loading>
+                        {{ form_transfer.hidden_tag() }}
+                        <div class="mb-2">
+                            {{ form_transfer.centroDestino(class='form-select' + (' is-invalid' if form_transfer.centroDestino.errors else '')) }}
+                            {% for error in form_transfer.centroDestino.errors %}
+                            <div class="invalid-feedback d-block">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <div class="mb-2">
+                            {{ form_transfer.motivo(class='form-control' + (' is-invalid' if form_transfer.motivo.errors else ''),
+                                  rows=2, maxlength=500,
+                                  placeholder='Motivo de la transferencia…') }}
+                            {% for error in form_transfer.motivo.errors %}
+                            <div class="invalid-feedback d-block">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-sm">
+                            <i class="fas fa-exchange-alt me-1" aria-hidden="true"></i>Transferir
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </details>
+        {% endif %}
         <a href="{{ url_for('folios.index') }}" class="btn btn-outline-secondary">
             <i class="fas fa-arrow-left me-1"></i>Volver
         </a>
@@ -141,6 +177,35 @@
                         <td>{{ folio.devolucion.usuario.username }}</td>
                     </tr>
                 </table>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if transferencias %}
+        <div class="card border-0 shadow-sm mt-4">
+            <div class="card-header bg-white border-bottom">
+                <h6 class="mb-0 fw-semibold">
+                    <i class="fas fa-exchange-alt me-2 text-primary"></i>Transferencias ({{ transferencias|length }})
+                </h6>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled mb-0">
+                    {% for t in transferencias %}
+                    <li class="py-2 {% if not loop.last %}border-bottom{% endif %}">
+                        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+                            <span>
+                                <a href="{{ url_for('centros.detail', id=t.centroOrigenId) }}" class="text-decoration-none">{{ t.centro_origen.name }}</a>
+                                <i class="fas fa-arrow-right mx-1 text-muted" aria-hidden="true"></i>
+                                <a href="{{ url_for('centros.detail', id=t.centroDestinoId) }}" class="text-decoration-none fw-semibold">{{ t.centro_destino.name }}</a>
+                            </span>
+                            <small class="text-muted">
+                                {{ t.fecha.strftime('%d/%m/%Y') }} — {{ t.usuario.username }}
+                            </small>
+                        </div>
+                        <div class="small mt-1"><i class="fas fa-comment-dots me-1 text-muted" aria-hidden="true"></i>{{ t.motivo }}</div>
+                    </li>
+                    {% endfor %}
+                </ul>
             </div>
         </div>
         {% endif %}

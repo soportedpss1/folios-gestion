@@ -16,6 +16,7 @@ from app.models.usuario import Usuario
 from app.models.entrega_folio import EntregaFolio
 from app.models.devolucion_folio import DevolucionFolio
 from app.models.folio_comentario import FolioComentario
+from app.models.transferencia_folio import TransferenciaFolio
 from app.recepcion.forms import (
     EditarRecepcionForm, ImportarRecepcionForm, RecepcionForm,
     detectar_solape, MAX_FOLIOS_POR_RECEPCION, FOLIO_MAX,
@@ -298,10 +299,11 @@ def create():
 def _folios_usados(folios):
     """Subconjunto de `folios` que no se pueden borrar ni reescribir.
 
-    Con entrega/devolución registrada, escaneado, comentario o estado !=
-    'disponible': el estado y los registros mandan, no solo la existencia
-    de entrega. `folio_comentarios` tiene FK sin ON DELETE → borrar el
-    folio daría IntegrityError (errno 1451 en MariaDB).
+    Con entrega/devolución registrada, escaneado, comentario, transferencia
+    o estado != 'disponible': el estado y los registros mandan, no solo la
+    existencia de entrega. `folio_comentarios` y `transferencia_folios` tienen
+    FK sin ON DELETE → borrar el folio daría IntegrityError (errno 1451 en
+    MariaDB).
     """
     ids = [f.id for f in folios]
     if not ids:
@@ -312,6 +314,9 @@ def _folios_usados(folios):
                      DevolucionFolio.query.filter(DevolucionFolio.folio_id.in_(ids)).all()}
     con_registro |= {r.folio_id for r in
                      FolioComentario.query.filter(FolioComentario.folio_id.in_(ids)).all()}
+    con_registro |= {r.folio_id for r in
+                     TransferenciaFolio.query.filter(
+                         TransferenciaFolio.folio_id.in_(ids)).all()}
     return [f for f in folios
             if f.estado != 'disponible' or f.escaneado or f.id in con_registro]
 

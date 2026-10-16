@@ -205,7 +205,8 @@ docker compose -f docker-compose.deploy.yml exec app python reset_password.py ad
   `alembic_version` vacía) → falla con `Table '…' already exists` en
   `0001_baseline`. Respalde y stamp a la **última** revisión que el esquema ya
   tiene (por las tablas presentes: `marca_config` → `0006_marca_config`,
-  `folio_comentarios` → `0007_folio_comentarios`; ver
+  `folio_comentarios` → `0007_folio_comentarios`,
+  `transferencia_folios` → `0008_transferencias`; ver
   README → Migraciones), y después `flask db upgrade`.
 
 Comprobar el esquema:

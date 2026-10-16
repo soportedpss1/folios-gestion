@@ -161,7 +161,8 @@ pero `alembic_version` está vacía — típico de una DB inicializada con
 el esquema **ya tiene**: stamp a `0001_baseline` haría que `0004` falle con el
 mismo error si `sync_config` ya existe. Respalde y elija la revisión por las
 tablas presentes (`sync_config` → ≥0004, `permiso_usuarios` → ≥0005,
-`marca_config` → ≥0006, `folio_comentarios` → ≥0007):
+`marca_config` → ≥0006, `folio_comentarios` → ≥0007,
+`transferencia_folios` → ≥0008):
 
 ```bash
 # 1) Respaldo antes de tocar alembic_version
@@ -170,13 +171,13 @@ docker compose exec db mariadb-dump -u"$DB_USER" -p"$DB_PASSWORD" "$DB_NAME" > b
 # 2) ¿Qué tablas hay y cuántas filas tiene alembic_version?
 docker compose exec db mariadb -u"$DB_USER" -p"$DB_PASSWORD" "$DB_NAME" -e 'SHOW TABLES; SELECT * FROM alembic_version;'
 
-# 3) Stamp a esa revisión (create_all con los modelos actuales → 0007) y subir
-FLASK_APP=run.py flask db stamp 0007_folio_comentarios
+# 3) Stamp a esa revisión (create_all con los modelos actuales → 0008) y subir
+FLASK_APP=run.py flask db stamp 0008_transferencias
 FLASK_APP=run.py flask db upgrade      # aplica solo lo que falta
 FLASK_APP=run.py flask db check        # debe quedar limpio
 ```
 
-Revisions: `0001_baseline` (esquema original) → `0002_integrity` (constraints únicos) → `0003_indexes` (índices compuestos de consulta: `(anioCert, estado, nulo)`, `(tipoCert_id, anioCert)` y `audit_logs.fecha`; elimina los índices de una sola columna que quedan subsumidos) → `0004_sync_config` (tabla `sync_config`: estado y frecuencia de la sincronización a Google Sheets) → `0005_permisos_usuario` (tabla `permiso_usuarios`: permisos granulares por usuario, FK a `usuarios` con CASCADE) → `0006_marca_config` (tabla `marca_config`: nombre/subtítulo de la app + logo y favicon como BLOB) → `0007_folio_comentarios` (tabla `folio_comentarios`: historial de comentarios con autor en el detalle de folio).
+Revisions: `0001_baseline` (esquema original) → `0002_integrity` (constraints únicos) → `0003_indexes` (índices compuestos de consulta: `(anioCert, estado, nulo)`, `(tipoCert_id, anioCert)` y `audit_logs.fecha`; elimina los índices de una sola columna que quedan subsumidos) → `0004_sync_config` (tabla `sync_config`: estado y frecuencia de la sincronización a Google Sheets) → `0005_permisos_usuario` (tabla `permiso_usuarios`: permisos granulares por usuario, FK a `usuarios` con CASCADE) → `0006_marca_config` (tabla `marca_config`: nombre/subtítulo de la app + logo y favicon como BLOB) → `0007_folio_comentarios` (tabla `folio_comentarios`: historial de comentarios con autor en el detalle de folio) → `0008_transferencias` (tabla `transferencia_folios`: transferencia de folios entregados entre centros de salud con motivo obligatorio y seguimiento).
 
 **Antes de `0002` en una BD con datos**, compruebe que no haya duplicados (el ALTER fallará si los hay):
 
