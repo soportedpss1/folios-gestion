@@ -1,6 +1,7 @@
 import json
 
-from flask import Blueprint, render_template, redirect, url_for, flash, make_response, request
+from flask import (Blueprint, render_template, redirect, url_for, flash,
+                   make_response, request, abort)
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 from app.extensions import db
@@ -27,6 +28,23 @@ centros_bp = Blueprint('centros', __name__, url_prefix='/centros')
 # Importación de centros: columnas exactas de la plantilla y tope de filas.
 HEADERS_CENTROS = ['nombre', 'telefono', 'direccion']
 MAX_CENTROS_POR_ARCHIVO = 500
+
+# Pestañas del detalle → valor de ?vista= en sus exportaciones.
+VISTAS_DETALLE = ('pendientes', 'todos', 'devueltos')
+
+
+def _vista_detalle():
+    """?vista= de los exports del detalle: None (export completo) o clave.
+
+    Valor desconocido → 400. Se valida ANTES de generar nada (y de importar
+    weasyprint, que sin pango revienta con OSError en el venv local).
+    """
+    vista = request.args.get('vista', '').strip()
+    if not vista:
+        return None
+    if vista not in VISTAS_DETALLE:
+        abort(400, description='Vista de exportación inválida.')
+    return vista
 
 # Carga anticipada de lo que los listados/exportaciones recorren fila a fila.
 # Se construyen en runtime: los backrefs (folio/centro/usuario) se configuran
@@ -420,6 +438,7 @@ def export_excel(id):
     from openpyxl.styles import Font, Alignment, PatternFill
 
     centro = get_or_404(Centro, id)
+    vista = _vista_detalle()
 
     entregas, pendientes, devueltos = _datos_del_centro(id)
 
@@ -431,70 +450,68 @@ def export_excel(id):
     header_fill = PatternFill(start_color='0D6EFD', end_color='0D6EFD', fill_type='solid')
     header_align = Alignment(horizontal='center')
 
-    # Sheet 1: Pendientes
-    ws1 = wb.active
-    ws1.title = 'Pendientes'
-    headers1 = ['Folio', 'Tipo Certificado', 'Fecha Entrega', 'Entregado por', 'Días en Centro']
-    for col, header in enumerate(headers1, 1):
-        cell = ws1.cell(row=1, column=col, value=header)
-        cell.font = header_font
-        cell.fill = header_fill
-        cell.alignment = header_align
-    for row, e in enumerate(pendientes, 2):
-        dias = (hoy - e.fechaEntrega).days
-        ws1.cell(row=row, column=1, value=e.folio.folio)
-        ws1.cell(row=row, column=2, value=e.folio.tipo_cert.name if e.folio.tipo_cert else '')
-        ws1.cell(row=row, column=3, value=e.fechaEntrega.strftime('%d/%m/%Y'))
-        ws1.cell(row=row, column=4, value=e.usuario.username if e.usuario else '')
-        ws1.cell(row=row, column=5, value=dias)
-    for col in ws1.columns:
-        max_length = max(len(str(cell.value or '')) for cell in col)
-        ws1.column_dimensions[col[0].column_letter].width = max_length + 2
+    def add_sheet(titulo, headers, filas, activa=False):
+        """Hoja con header formateado, filas y ancho automático de columnas."""
+        ws = wb.active if activa else wb.create_sheet()
+        ws.title = titulo
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col, value=header)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = header_align
+        for row, valores in enumerate(filas, 2):
+            for col, valor in enumerate(valores, 1):
+                ws.cell(row=row, column=col, value=valor)
+        for col in ws.columns:
+            max_length = max(len(str(cell.value or '')) for cell in col)
+            ws.column_dimensions[col[0].column_letter].width = max_length + 2
 
-    # Sheet 2: Todos Entregados
-    ws2 = wb.create_sheet('Todos Entregados')
-    headers2 = ['Folio', 'Tipo Certificado', 'Estado', 'F. Entrega', 'Entregado por', 'F. Devolución', 'Recibido Por']
-    for col, header in enumerate(headers2, 1):
-        cell = ws2.cell(row=1, column=col, value=header)
-        cell.font = header_font
-        cell.fill = header_fill
-        cell.alignment = header_align
-    for row, e in enumerate(entregas, 2):
-        folio = e.folio
-        ws2.cell(row=row, column=1, value=folio.folio)
-        ws2.cell(row=row, column=2, value=folio.tipo_cert.name if folio.tipo_cert else '')
-        ws2.cell(row=row, column=3, value=folio.estado)
-        ws2.cell(row=row, column=4, value=e.fechaEntrega.strftime('%d/%m/%Y'))
-        ws2.cell(row=row, column=5, value=e.usuario.username if e.usuario else '')
-        if folio.devolucion:
-            ws2.cell(row=row, column=6, value=folio.devolucion.fechaDevolucion.strftime('%d/%m/%Y') if folio.devolucion.fechaDevolucion else '-')
-            ws2.cell(row=row, column=7, value=folio.devolucion.usuario.username if folio.devolucion.usuario else '-')
-        else:
-            ws2.cell(row=row, column=6, value='-')
-            ws2.cell(row=row, column=7, value='-')
-    for col in ws2.columns:
-        max_length = max(len(str(cell.value or '')) for cell in col)
-        ws2.column_dimensions[col[0].column_letter].width = max_length + 2
+    secciones = {
+        'pendientes': (
+            'Pendientes',
+            ['Folio', 'Tipo Certificado', 'Fecha Entrega', 'Entregado por', 'Días en Centro'],
+            [[e.folio.folio,
+              e.folio.tipo_cert.name if e.folio.tipo_cert else '',
+              e.fechaEntrega.strftime('%d/%m/%Y'),
+              e.usuario.username if e.usuario else '',
+              (hoy - e.fechaEntrega).days]
+             for e in pendientes],
+        ),
+        'todos': (
+            'Todos Entregados',
+            ['Folio', 'Tipo Certificado', 'Estado', 'F. Entrega', 'Entregado por',
+             'F. Devolución', 'Recibido Por'],
+            [[e.folio.folio,
+              e.folio.tipo_cert.name if e.folio.tipo_cert else '',
+              e.folio.estado,
+              e.fechaEntrega.strftime('%d/%m/%Y'),
+              e.usuario.username if e.usuario else '',
+              (e.folio.devolucion.fechaDevolucion.strftime('%d/%m/%Y')
+               if e.folio.devolucion and e.folio.devolucion.fechaDevolucion else '-'),
+              (e.folio.devolucion.usuario.username
+               if e.folio.devolucion and e.folio.devolucion.usuario else '-')]
+             for e in entregas],
+        ),
+        'devueltos': (
+            'Devueltos',
+            ['Folio', 'Tipo Certificado', 'F. Entrega', 'F. Devolución',
+             'Recibido Por', 'Días en Centro'],
+            [[d.folio.folio,
+              d.folio.tipo_cert.name if d.folio.tipo_cert else '',
+              (d.folio.entrega.fechaEntrega.strftime('%d/%m/%Y')
+               if d.folio.entrega else '-'),
+              d.fechaDevolucion.strftime('%d/%m/%Y'),
+              d.usuario.username if d.usuario else '',
+              (d.fechaDevolucion - d.folio.entrega.fechaEntrega).days
+              if d.folio.entrega else 0]
+             for d in devueltos],
+        ),
+    }
 
-    # Sheet 3: Devueltos
-    ws3 = wb.create_sheet('Devueltos')
-    headers3 = ['Folio', 'Tipo Certificado', 'F. Entrega', 'F. Devolución', 'Recibido Por', 'Días en Centro']
-    for col, header in enumerate(headers3, 1):
-        cell = ws3.cell(row=1, column=col, value=header)
-        cell.font = header_font
-        cell.fill = header_fill
-        cell.alignment = header_align
-    for row, d in enumerate(devueltos, 2):
-        dias = (d.fechaDevolucion - d.folio.entrega.fechaEntrega).days if d.folio.entrega else 0
-        ws3.cell(row=row, column=1, value=d.folio.folio)
-        ws3.cell(row=row, column=2, value=d.folio.tipo_cert.name if d.folio.tipo_cert else '')
-        ws3.cell(row=row, column=3, value=d.folio.entrega.fechaEntrega.strftime('%d/%m/%Y') if d.folio.entrega else '-')
-        ws3.cell(row=row, column=4, value=d.fechaDevolucion.strftime('%d/%m/%Y'))
-        ws3.cell(row=row, column=5, value=d.usuario.username if d.usuario else '')
-        ws3.cell(row=row, column=6, value=dias)
-    for col in ws3.columns:
-        max_length = max(len(str(cell.value or '')) for cell in col)
-        ws3.column_dimensions[col[0].column_letter].width = max_length + 2
+    # vista → solo esa hoja; sin vista → las 3 (export completo, como siempre).
+    for i, clave in enumerate(VISTAS_DETALLE if vista is None else (vista,)):
+        titulo, headers, filas = secciones[clave]
+        add_sheet(titulo, headers, filas, activa=(i == 0))
 
     output = BytesIO()
     neutralizar_formulas(wb)  # nunca escribir '=...' como fórmula (inyección al abrir)
@@ -514,9 +531,12 @@ def export_excel(id):
 @centros_bp.route('/<int:id>/export/pdf')
 @login_required
 def export_pdf(id):
-    from weasyprint import HTML
-
     centro = get_or_404(Centro, id)
+    # 400 para vista inválida ANTES de importar weasyprint: sin pango la
+    # importación revienta con OSError en el venv local y el 400 nunca se vería.
+    vista = _vista_detalle()
+
+    from weasyprint import HTML
 
     entregas, pendientes, devueltos = _datos_del_centro(id)
 
@@ -579,6 +599,33 @@ def export_pdf(id):
             return '<tr><td colspan="6" style="text-align:center">No hay devoluciones registradas</td></tr>'
         return ''.join(filas)
 
+    def seccion_pdf(titulo, total, headers, rows):
+        thead = ''.join(f'<th>{header}</th>' for header in headers)
+        return (f'<div class="section-title">{titulo} ({total})</div>\n'
+                f'<table>\n<thead>\n<tr>{thead}</tr>\n</thead>\n'
+                f'<tbody>\n{rows}\n</tbody>\n</table>')
+
+    secciones = {
+        'pendientes': seccion_pdf(
+            'Pendientes de Devolucion', len(pendientes),
+            ['Folio', 'Tipo Certificado', 'Fecha Entrega', 'Entregado por',
+             'Dias en Centro'],
+            build_pendientes_rows()),
+        'todos': seccion_pdf(
+            'Todos Entregados', len(entregas),
+            ['Folio', 'Tipo Certificado', 'Estado', 'F. Entrega',
+             'Entregado por', 'F. Devolucion', 'Recibido Por'],
+            build_entregas_rows()),
+        'devueltos': seccion_pdf(
+            'Devueltos', len(devueltos),
+            ['Folio', 'Tipo Certificado', 'F. Entrega', 'F. Devolucion',
+             'Recibido Por', 'Dias en Centro'],
+            build_devueltos_rows()),
+    }
+    # vista → solo esa sección; sin vista → las 3 (export completo, como siempre).
+    cuerpo = ''.join(secciones[clave] for clave in
+                     (VISTAS_DETALLE if vista is None else (vista,)))
+
     logo = logo_pdf()
     html_content = f"""
     <!DOCTYPE html>
@@ -612,56 +659,7 @@ def export_pdf(id):
             <tr><td>Direccion:</td><td>{escape(centro.direccion) if centro.direccion else '-'}</td></tr>
         </table>
 
-        <div class="section-title">Pendientes de Devolucion ({len(pendientes)})</div>
-        <table>
-            <thead>
-                <tr>
-                    <th>Folio</th>
-                    <th>Tipo Certificado</th>
-                    <th>Fecha Entrega</th>
-                    <th>Entregado por</th>
-                    <th>Dias en Centro</th>
-                </tr>
-            </thead>
-            <tbody>
-                {build_pendientes_rows()}
-            </tbody>
-        </table>
-
-        <div class="section-title">Todos Entregados ({len(entregas)})</div>
-        <table>
-            <thead>
-                <tr>
-                    <th>Folio</th>
-                    <th>Tipo Certificado</th>
-                    <th>Estado</th>
-                    <th>F. Entrega</th>
-                    <th>Entregado por</th>
-                    <th>F. Devolucion</th>
-                    <th>Recibido Por</th>
-                </tr>
-            </thead>
-            <tbody>
-                {build_entregas_rows()}
-            </tbody>
-        </table>
-
-        <div class="section-title">Devueltos ({len(devueltos)})</div>
-        <table>
-            <thead>
-                <tr>
-                    <th>Folio</th>
-                    <th>Tipo Certificado</th>
-                    <th>F. Entrega</th>
-                    <th>F. Devolucion</th>
-                    <th>Recibido Por</th>
-                    <th>Dias en Centro</th>
-                </tr>
-            </thead>
-            <tbody>
-                {build_devueltos_rows()}
-            </tbody>
-        </table>
+        {cuerpo}
     </body>
     </html>
     """

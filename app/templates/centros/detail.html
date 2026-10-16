@@ -9,10 +9,12 @@
     </h4>
     <div class="d-flex gap-2">
         <div class="btn-group">
-            <a href="{{ url_for('centros.export_excel', id=centro.id) }}" class="btn btn-success btn-sm">
+            <a href="{{ url_for('centros.export_excel', id=centro.id, vista='pendientes') }}"
+               class="btn btn-success btn-sm" id="btn-export-excel">
                 <i class="fas fa-file-excel me-1"></i>Excel
             </a>
-            <a href="{{ url_for('centros.export_pdf', id=centro.id) }}" class="btn btn-danger btn-sm">
+            <a href="{{ url_for('centros.export_pdf', id=centro.id, vista='pendientes') }}"
+               class="btn btn-danger btn-sm" id="btn-export-pdf">
                 <i class="fas fa-file-pdf me-1"></i>PDF
             </a>
         </div>
@@ -293,10 +295,26 @@ $(document).ready(function() {
 
     initTable('table-pendientes');
 
+    // Exportaciones por pestaña: los botones del encabezado apuntan a la
+    // pestaña activa (?vista=); sin JS exportan la pestaña por defecto.
+    var vistaPorTab = {
+        '#tab-pendientes': 'pendientes',
+        '#tab-todos': 'todos',
+        '#tab-devueltos': 'devueltos'
+    };
+
+    function actualizarExport(vista) {
+        $('#btn-export-excel').attr(
+            'href', '{{ url_for("centros.export_excel", id=centro.id) }}?vista=' + vista);
+        $('#btn-export-pdf').attr(
+            'href', '{{ url_for("centros.export_pdf", id=centro.id) }}?vista=' + vista);
+    }
+
     $('a[data-bs-toggle="tab"]').on('shown.bs.tab', function(e) {
         var target = $(e.target).attr('href');
         if (target === '#tab-todos') initTable('table-todos');
         else if (target === '#tab-devueltos') initTable('table-devueltos');
+        if (vistaPorTab[target]) actualizarExport(vistaPorTab[target]);
     });
 });
 </script>
