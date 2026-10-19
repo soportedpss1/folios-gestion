@@ -3,11 +3,13 @@ from datetime import date
 
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
+from sqlalchemy import String, cast
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
 from app.extensions import db
 from app.models.centro import Centro
 from app.models.devolucion_folio import DevolucionFolio
+from app.models.folio import Folio
 from app.models.tipo_certificado import TipoCertificado
 from app.devoluciones.forms import DevolucionForm, DevolucionEditForm, ImportarDevolucionForm
 from app.services import import_excel
@@ -29,12 +31,38 @@ MAX_PREVIA_MOSTRAR = 200
 @login_required
 def index():
     page = request.args.get('page', 1, type=int)
-    pagination = DevolucionFolio.query.options(
+    busqueda = request.args.get('busqueda', '').strip()[:50]
+    centro_id = request.args.get('centroId', type=int)
+    # type= date.fromisoformat devuelve None si el valor es inválido:
+    # el filtro se ignora y la lista queda completa.
+    desde = request.args.get('desde', type=date.fromisoformat)
+    hasta = request.args.get('hasta', type=date.fromisoformat)
+
+    query = DevolucionFolio.query.options(
         selectinload(DevolucionFolio.folio),
         selectinload(DevolucionFolio.centro),
         selectinload(DevolucionFolio.usuario),
-    ).order_by(DevolucionFolio.created_at.desc()).paginate(page=page, per_page=25, error_out=False)
-    return render_template('devoluciones/index.html', devoluciones=pagination.items, pagination=pagination)
+    )
+    if busqueda:
+        # Folio.folio es Integer: LIKE directo deprecado (SADeprecationWarning)
+        query = query.join(DevolucionFolio.folio).filter(
+            cast(Folio.folio, String).like(f'%{busqueda}%'))
+    if centro_id:
+        # filter() con columna explícita: filter_by tras el join del filtro
+        # de folio resolvería la key contra la entidad joined (Folio).
+        query = query.filter(DevolucionFolio.centroId == centro_id)
+    if desde:
+        query = query.filter(DevolucionFolio.fechaDevolucion >= desde)
+    if hasta:
+        query = query.filter(DevolucionFolio.fechaDevolucion <= hasta)
+
+    pagination = query.order_by(DevolucionFolio.created_at.desc()) \
+        .paginate(page=page, per_page=25, error_out=False)
+    centros = Centro.query.filter_by(activo=True).order_by(Centro.name).all()
+    return render_template('devoluciones/index.html', devoluciones=pagination.items,
+                           pagination=pagination, centros=centros,
+                           current_busqueda=busqueda, current_centro=centro_id,
+                           current_desde=desde, current_hasta=hasta)
 
 
 @devoluciones_bp.route('/create', methods=['GET', 'POST'])

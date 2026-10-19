@@ -22,6 +22,44 @@
     </div>
 </div>
 
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label small fw-semibold" for="busqueda">Buscar Folio</label>
+                <input type="text" id="busqueda" name="busqueda" class="form-control form-control-sm" placeholder="Número de folio..." value="{{ current_busqueda or '' }}" inputmode="numeric" autocomplete="off">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-semibold" for="centroId">Centro de Salud</label>
+                <select id="centroId" name="centroId" class="form-select form-select-sm">
+                    <option value="">Todos</option>
+                    {% for c in centros %}
+                        <option value="{{ c.id }}" {% if current_centro == c.id %}selected{% endif %}>{{ c.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-semibold" for="desde">Fecha desde</label>
+                <input type="date" id="desde" name="desde" class="form-control form-control-sm" value="{{ current_desde.isoformat() if current_desde else '' }}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-semibold" for="hasta">Fecha hasta</label>
+                <input type="date" id="hasta" name="hasta" class="form-control form-control-sm" value="{{ current_hasta.isoformat() if current_hasta else '' }}">
+            </div>
+            <div class="col-md-2">
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary btn-sm flex-fill">
+                        <i class="fas fa-search me-1"></i>Filtrar
+                    </button>
+                    <a href="{{ url_for('entregas.index') }}" class="btn btn-outline-secondary btn-sm" title="Limpiar filtros" aria-label="Limpiar filtros">
+                        <i class="fas fa-times" aria-hidden="true"></i>
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
 <div class="card border-0 shadow-sm">
     <div class="card-body p-0">
         <div class="table-responsive">

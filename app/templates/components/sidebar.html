@@ -50,6 +50,13 @@
         </li>
 
         <li class="nav-item mb-1">
+            <a class="nav-link text-white-50 {% if request.endpoint and 'centros' in request.endpoint %}active{% endif %}"
+               href="{{ url_for('centros.index') }}">
+                <i class="fas fa-hospital me-2"></i> Centros
+            </a>
+        </li>
+
+        <li class="nav-item mb-1">
             <a class="nav-link text-white-50 {% if request.endpoint and 'reportes' in request.endpoint %}active{% endif %}"
                href="{{ url_for('reportes.index') }}">
                 <i class="fas fa-chart-bar me-2"></i> Reportes
@@ -96,13 +103,6 @@
             </a>
         </li>
         {% endif %}
-
-        <li class="nav-item mb-1">
-            <a class="nav-link text-white-50 {% if request.endpoint and 'centros' in request.endpoint %}active{% endif %}"
-               href="{{ url_for('centros.index') }}">
-                <i class="fas fa-hospital me-2"></i> Centros
-            </a>
-        </li>
 
         {% if puede('certificados.gestionar') %}
         <li class="nav-item mb-1">

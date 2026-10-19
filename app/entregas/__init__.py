@@ -3,11 +3,13 @@ from datetime import date
 
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
+from sqlalchemy import String, cast
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
 from app.extensions import db
 from app.models.centro import Centro
 from app.models.entrega_folio import EntregaFolio
+from app.models.folio import Folio
 from app.models.tipo_certificado import TipoCertificado
 from app.entregas.forms import EntregaCreateForm, EntregaEditForm, ImportarEntregaForm
 from app.services import import_excel
@@ -30,12 +32,38 @@ MAX_PREVIA_MOSTRAR = 200
 @login_required
 def index():
     page = request.args.get('page', 1, type=int)
-    pagination = EntregaFolio.query.options(
+    busqueda = request.args.get('busqueda', '').strip()[:50]
+    centro_id = request.args.get('centroId', type=int)
+    # type= date.fromisoformat devuelve None si el valor es inválido:
+    # el filtro se ignora y la lista queda completa.
+    desde = request.args.get('desde', type=date.fromisoformat)
+    hasta = request.args.get('hasta', type=date.fromisoformat)
+
+    query = EntregaFolio.query.options(
         selectinload(EntregaFolio.folio),
         selectinload(EntregaFolio.centro),
         selectinload(EntregaFolio.usuario),
-    ).order_by(EntregaFolio.created_at.desc()).paginate(page=page, per_page=25, error_out=False)
-    return render_template('entregas/index.html', entregas=pagination.items, pagination=pagination)
+    )
+    if busqueda:
+        # Folio.folio es Integer: LIKE directo deprecado (SADeprecationWarning)
+        query = query.join(EntregaFolio.folio).filter(
+            cast(Folio.folio, String).like(f'%{busqueda}%'))
+    if centro_id:
+        # filter() con columna explícita: filter_by tras el join del filtro
+        # de folio resolvería la key contra la entidad joined (Folio).
+        query = query.filter(EntregaFolio.centroId == centro_id)
+    if desde:
+        query = query.filter(EntregaFolio.fechaEntrega >= desde)
+    if hasta:
+        query = query.filter(EntregaFolio.fechaEntrega <= hasta)
+
+    pagination = query.order_by(EntregaFolio.created_at.desc()) \
+        .paginate(page=page, per_page=25, error_out=False)
+    centros = Centro.query.filter_by(activo=True).order_by(Centro.name).all()
+    return render_template('entregas/index.html', entregas=pagination.items,
+                           pagination=pagination, centros=centros,
+                           current_busqueda=busqueda, current_centro=centro_id,
+                           current_desde=desde, current_hasta=hasta)
 
 
 @entregas_bp.route('/api/folios-disponibles')
