@@ -92,7 +92,8 @@ def test_preview_resuelve_disponible(admin_client, tipo, centro):
     text = resp.get_data(as_text=True)
     assert '<strong>1</strong> folio(s) válido(s) de <strong>1</strong>' in text
     assert 'Confirmar importación' in text
-    assert '01/10/2026' in text, 'la vista previa muestra la fecha por fila'
+    assert 'Todas las filas del archivo son válidas' in text, \
+        'sin inválidas no se lista ninguna fila (la fecha por fila se verifica en la lista de inválidas)'
     assert '<input type="hidden" name="fecha"' not in text, 'sin hidden de fecha'
     assert 'id="centroId"' not in text, 'sin hidden/select de centro'
     assert EntregaFolio.query.count() == 0, 'la vista previa no debe crear nada'
@@ -115,6 +116,33 @@ def test_preview_marca_inexistente(admin_client, tipo, centro):
     text = resp.get_data(as_text=True)
     assert '<strong>0</strong> folio(s) válido(s) de <strong>1</strong>' in text
     assert 'no existe' in text
+
+
+def test_preview_lista_solo_filas_invalidas(admin_client, tipo, centro):
+    make_folio(tipo, anio=Y, numero=1000)
+    resp = post_importar(admin_client, [
+        [1000, tipo.name, Y, '01/10/2026', centro.name, 'adminuser'],
+        [9999, tipo.name, Y, '01/10/2026', centro.name, 'adminuser'],
+    ])
+    text = resp.get_data(as_text=True)
+    assert '<strong>1</strong> folio(s) válido(s) de <strong>2</strong>' in text, \
+        'el resumen sigue contando válidas y total'
+    assert 'El folio no existe.' in text, 'la fila inválida se lista con su error'
+    assert '01/10/2026' in text, 'la fila inválida muestra su fecha por fila'
+    assert 'Folio 1000' not in text, \
+        'la lista de validación no debe mostrar filas válidas'
+
+
+def test_preview_sin_filas_invalidas_muestra_mensaje(admin_client, tipo, centro):
+    make_folio(tipo, anio=Y, numero=1000)
+    resp = post_importar(admin_client,
+                         [[1000, tipo.name, Y, '01/10/2026', centro.name,
+                           'adminuser']])
+    text = resp.get_data(as_text=True)
+    assert 'Todas las filas del archivo son válidas' in text, \
+        'sin inválidas se muestra el mensaje en lugar de la tabla'
+    assert 'Folio 1000' not in text, 'no debe haber filas en la lista'
+    assert 'Confirmar importación' in text, 'el resumen y la confirmación siguen'
 
 
 def test_preview_rechaza_archivo_sin_columna_fecha(admin_client, tipo, centro):

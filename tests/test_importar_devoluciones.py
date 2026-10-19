@@ -93,7 +93,8 @@ def test_preview_resuelve_entregado_al_centro(admin_client, folio_entregado,
     text = resp.get_data(as_text=True)
     assert '<strong>1</strong> folio(s) válido(s) de <strong>1</strong>' in text
     assert 'Confirmar importación' in text
-    assert '02/10/2026' in text, 'la vista previa muestra la fecha por fila'
+    assert 'Todas las filas del archivo son válidas' in text, \
+        'sin inválidas no se lista ninguna fila (la fecha por fila se verifica en la lista de inválidas)'
     assert '<input type="hidden" name="fecha"' not in text, 'sin hidden de fecha'
     assert 'id="centroId"' not in text, 'sin hidden/select de centro'
     assert DevolucionFolio.query.count() == 0, 'la vista previa no debe crear nada'
@@ -120,6 +121,36 @@ def test_preview_rechaza_folio_no_entregado(admin_client, tipo, centro):
     text = resp.get_data(as_text=True)
     assert '<strong>0</strong> folio(s) válido(s) de <strong>1</strong>' in text
     assert 'no está entregado' in text
+
+
+def test_preview_lista_solo_filas_invalidas(admin_client, folio_entregado,
+                                            centro, tipo):
+    resp = post_importar(admin_client, [
+        [folio_entregado.folio, tipo.name, Y, '02/10/2026', centro.name,
+         'adminuser'],
+        [9999, tipo.name, Y, '02/10/2026', centro.name, 'adminuser'],
+    ])
+    text = resp.get_data(as_text=True)
+    assert '<strong>1</strong> folio(s) válido(s) de <strong>2</strong>' in text, \
+        'el resumen sigue contando válidas y total'
+    assert 'El folio no existe.' in text, 'la fila inválida se lista con su error'
+    assert '02/10/2026' in text, 'la fila inválida muestra su fecha por fila'
+    assert f'Folio {folio_entregado.folio}' not in text, \
+        'la lista de validación no debe mostrar filas válidas'
+
+
+def test_preview_sin_filas_invalidas_muestra_mensaje(admin_client,
+                                                     folio_entregado, centro,
+                                                     tipo):
+    resp = post_importar(admin_client, [
+        [folio_entregado.folio, tipo.name, Y, '02/10/2026', centro.name,
+         'adminuser']])
+    text = resp.get_data(as_text=True)
+    assert 'Todas las filas del archivo son válidas' in text, \
+        'sin inválidas se muestra el mensaje en lugar de la tabla'
+    assert f'Folio {folio_entregado.folio}' not in text, \
+        'no debe haber filas en la lista'
+    assert 'Confirmar importación' in text, 'el resumen y la confirmación siguen'
 
 
 def test_preview_centro_desconocido_marca_fila(admin_client, folio_entregado, tipo):

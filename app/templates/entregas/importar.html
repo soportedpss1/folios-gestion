@@ -53,6 +53,7 @@
         </div>
 
         {% if preview %}
+        {% set invalidas = preview|selectattr('error')|list %}
         <div class="card border-0 shadow-sm mb-4">
             <div class="card-body p-4">
                 <div class="alert {% if total_validas %}alert-info{% else %}alert-danger{% endif %} mb-3" role="status" tabindex="-1">
@@ -63,11 +64,12 @@
                     {% if responsables %}
                     A nombre de <strong>{{ responsables[:3]|join(', ') }}{{ ' y más' if responsables|length > 3 else '' }}</strong>.
                     {% endif %}
-                    {% if preview|length > max_mostrar %}
+                    {% if invalidas|length > max_mostrar %}
                         Se muestran las primeras {{ max_mostrar }}.
                     {% endif %}
                 </div>
 
+                {% if invalidas %}
                 <div class="table-responsive">
                     <table class="table table-sm align-middle">
                         <thead class="table-light">
@@ -81,7 +83,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% for p in preview[:max_mostrar] %}
+                            {% for p in invalidas[:max_mostrar] %}
                             <tr>
                                 <td>{{ p.n }}</td>
                                 <td class="col-folio">{{ p.etiqueta }}</td>
@@ -101,17 +103,20 @@
                                     {% endif %}
                                 </td>
                                 <td>
-                                    {% if p.error %}
-                                        <span class="badge bg-danger">{{ p.error }}</span>
-                                    {% else %}
-                                        <span class="badge bg-success">Válido</span>
-                                    {% endif %}
+                                    <span class="badge bg-danger">{{ p.error }}</span>
                                 </td>
                             </tr>
                             {% endfor %}
                         </tbody>
                     </table>
                 </div>
+                {% else %}
+                <div class="alert alert-success mb-0" role="status">
+                    <i class="fas fa-check-circle me-1"></i>
+                    Todas las filas del archivo son válidas; no hay filas
+                    inválidas que revisar.
+                </div>
+                {% endif %}
 
                 {% if total_validas %}
                 <form method="POST" action="{{ url_for('entregas.importar_confirmar') }}" data-loading>
