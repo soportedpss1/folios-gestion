@@ -81,6 +81,10 @@
     --sidebar-text: #E2E8F0;
     --sidebar-text-dim: #94A3B8;
 
+    /* Tenue legible sobre fondos oscuros (toasts/swal: cierre de × y botones).
+       En light #475569; en dark #475569 cae a ~2.3:1 → #94A3B8 (7:1). */
+    --text-muted-tone: #94A3B8;
+
     /* Sobre el sidebar más oscuro, thumb un tono más discreto */
     --scrollbar-thumb: #475569;        /* slate-600 */
     --scrollbar-thumb-hover: #94A3B8;  /* slate-400 */

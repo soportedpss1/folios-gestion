@@ -17,7 +17,7 @@ from app.services import movimientos as mov
 from app.services.audit import log_audit
 from app.services.mensajes import REFRESQUE_INTENTE
 from app.services.queries import get_or_404, usuario_activo
-from app.utils import plural
+from app.utils import plural, parsear_fecha
 from app.decorators import permiso_requerido
 
 devoluciones_bp = Blueprint('devoluciones', __name__, url_prefix='/devoluciones')
@@ -33,10 +33,10 @@ def index():
     page = request.args.get('page', 1, type=int)
     busqueda = request.args.get('busqueda', '').strip()[:50]
     centro_id = request.args.get('centroId', type=int)
-    # type= date.fromisoformat devuelve None si el valor es inválido:
-    # el filtro se ignora y la lista queda completa.
-    desde = request.args.get('desde', type=date.fromisoformat)
-    hasta = request.args.get('hasta', type=date.fromisoformat)
+    # parsear_fecha acepta dd/mm/aaaa (lo que envía flatpickr) o ISO;
+    # inválido → None: el filtro se ignora y la lista queda completa.
+    desde = parsear_fecha(request.args.get('desde', ''))
+    hasta = parsear_fecha(request.args.get('hasta', ''))
 
     query = DevolucionFolio.query.options(
         selectinload(DevolucionFolio.folio),

@@ -3,20 +3,48 @@
 {% block title %}Iniciar Sesión{% endblock %}
 
 {% block auth_content %}
-<div class="login-container">
+<div class="login-split">
     {% include 'components/flash.html' %}
-    <div class="card shadow-lg border-0">
-        <div class="card-body p-5">
-            <div class="text-center mb-4">
-                {% if marca.tiene_logo %}
-                <img src="{{ marca.logo_url }}" alt="{{ marca.nombre }}" class="mb-3" style="max-height:64px;">
-                {% else %}
-                <i class="fas fa-file-medical-alt text-primary fa-3x mb-3"></i>
-                {% endif %}
-                <h4 class="fw-bold text-body-emphasis">{{ marca.nombre }}</h4>
-                <p class="text-muted small">Dirección Provincial de Salud Santiago 1</p>
-                <hr>
-            </div>
+
+    <!-- Panel de marca (solo ≥lg): identidad + qué hace el sistema -->
+    <aside class="login-brand d-none d-lg-flex flex-column justify-content-between">
+        <div>
+            {% if marca.tiene_logo %}
+            <img src="{{ marca.logo_url }}" alt="{{ marca.nombre }}" class="login-brand-logo">
+            {% else %}
+            <span class="login-brand-icon"><i class="fas fa-file-medical-alt" aria-hidden="true"></i></span>
+            {% endif %}
+            <h1 class="login-brand-nombre">{{ marca.nombre }}</h1>
+            <p class="login-brand-sub">Dirección Provincial de Salud Santiago 1</p>
+
+            <ul class="login-brand-features list-unstyled">
+                <li><i class="fas fa-layer-group" aria-hidden="true"></i>Gestión de folios</li>
+                <li><i class="fas fa-truck-moving" aria-hidden="true"></i>Trazabilidad de entregas y devoluciones</li>
+                <li><i class="fas fa-chart-column" aria-hidden="true"></i>Reportes y exportación</li>
+            </ul>
+        </div>
+        <p class="login-brand-footer">
+            <i class="fas fa-shield-halved" aria-hidden="true"></i>Departamento de Bioestadística
+        </p>
+    </aside>
+
+    <!-- Panel del formulario -->
+    <main class="login-form-panel">
+        <header class="login-brand-compact d-lg-none">
+            {% if marca.tiene_logo %}
+            <img src="{{ marca.logo_url }}" alt="{{ marca.nombre }}" class="login-brand-logo-sm">
+            {% else %}
+            <i class="fas fa-file-medical-alt" aria-hidden="true"></i>
+            {% endif %}
+            <span class="login-brand-compact-texto">
+                <strong>{{ marca.nombre }}</strong>
+                <small>Dirección Provincial de Salud Santiago 1</small>
+            </span>
+        </header>
+
+        <div class="login-form-wrap">
+            <h2 class="login-form-titulo text-body-emphasis">Iniciar sesión</h2>
+            <p class="login-form-sub">Ingrese sus credenciales para acceder al sistema.</p>
 
             <form method="POST" data-loading>
                 {{ form.hidden_tag() }}
@@ -50,11 +78,10 @@
                 {{ form.submit(class="btn btn-primary btn-lg w-100") }}
             </form>
         </div>
-        <div class="card-footer text-center bg-light">
-            <small class="text-muted">
-                <i class="fas fa-shield-alt me-1"></i> Departamento de Bioestadística
-            </small>
-        </div>
-    </div>
+
+        <p class="login-footer d-lg-none">
+            <i class="fas fa-shield-halved" aria-hidden="true"></i>Departamento de Bioestadística
+        </p>
+    </main>
 </div>
 {% endblock %}

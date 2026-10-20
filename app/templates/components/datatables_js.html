@@ -1,0 +1,23 @@
+{# Assets + init de DataTables para páginas con .data-table o dtConfig.
+   Incluir desde el bloque {% block datatables_js %} de la página.
+   El init va aquí (antes de main.js): las páginas sin DataTables no lo sirven. #}
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js" integrity="sha384-cjmdOgDzOE22dUheI5E6Gzd3upfmReW8N1y/4jwKQE50KYcvFKZJA9JxWgQOzqwQ" crossorigin="anonymous"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js" integrity="sha384-PgPBH0hy6DTJwu7pTf6bkRqPlf/+pjUBExpr/eIfzszlGYFlF9Wi9VTAJODPhgCO" crossorigin="anonymous"></script>
+<script>
+    $(document).ready(function() {
+        $('.data-table').each(function() {
+            // DataTables no soporta colspan en tbody (tn/18): si la tabla está
+            // vacía (fila de estado con colspan) no se inicializa.
+            if ($(this).find('tbody td[colspan]').length) {
+                return;
+            }
+            $(this).DataTable({
+                {% include 'components/datatables_lang.html' %}
+                pageLength: 10,
+                lengthMenu: [10, 25, 50, 100],
+                order: [],
+                dom: '<"row"<"col-sm-6"l><"col-sm-6"f>>rtip'
+            });
+        });
+    });
+</script>

@@ -444,3 +444,14 @@ document.addEventListener('DOMContentLoaded', function() {
         cargar();
     }
 });
+
+// ---------- Campos de fecha flatpickr (dd/mm/aaaa siempre) ----------
+// El formato de <input type="date"> lo decide el locale del navegador;
+// flatpickr con dateFormat d/m/Y fija dd/mm/aaaa pase lo que pase.
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof flatpickr === 'undefined') return; // sin CDN no hay picker
+    flatpickr('.flatpickr', {
+        locale: 'es',
+        dateFormat: 'd/m/Y',
+    });
+});

@@ -262,23 +262,185 @@ body {
     border-radius: 0.5rem;
 }
 
-/* ---------- Login ---------- */
+/* ---------- Login (split: panel de marca + panel de formulario) ---------- */
 .login-wrapper {
     min-height: 100vh;
     display: flex;
+    align-items: stretch;
+    background: var(--bs-body-bg); /* el degradado vive en .login-brand */
+}
+
+.login-split {
+    flex: 1;
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: minmax(0, 45%) 1fr;
+}
+
+/* Panel izquierdo: marca sobre degradado institucional (azul → verde).
+   Es color de marca, no de tema: no cambia con dark mode. */
+.login-brand {
+    position: relative;
+    padding: clamp(2rem, 5vw, 4rem);
+    color: #fff;
+    background:
+        radial-gradient(110% 80% at 12% 8%, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0) 55%),
+        radial-gradient(75% 65% at 88% 92%, rgba(25, 135, 84, 0.5) 0%, rgba(25, 135, 84, 0) 60%),
+        linear-gradient(150deg, var(--primary-dark) 0%, var(--primary) 60%, #166534 140%);
+    overflow: hidden;
+}
+
+.login-brand-logo {
+    max-height: 64px;
+    display: block;
+    margin-bottom: 1.5rem;
+}
+
+.login-brand-icon {
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, var(--primary-dark) 0%, var(--secondary) 100%);
-}
-
-.login-container {
-    width: 100%;
-    max-width: 420px;
-    padding: 1rem;
-}
-
-.login-container .card {
+    width: 64px;
+    height: 64px;
     border-radius: 1rem;
+    background: rgba(255, 255, 255, 0.12);
+    font-size: 1.75rem;
+    margin-bottom: 1.5rem;
+}
+
+.login-brand-nombre {
+    font-size: clamp(1.6rem, 2.4vw, 2.1rem);
+    font-weight: 700;
+    line-height: 1.2;
+    margin: 0 0 0.5rem;
+    color: #fff;
+}
+
+.login-brand-sub {
+    color: rgba(255, 255, 255, 0.85); /* ~5.9:1 sobre --primary */
+    font-size: 1rem;
+    margin: 0;
+}
+
+.login-brand-features {
+    display: grid;
+    gap: 0.85rem;
+    margin-top: 2.5rem;
+    color: rgba(255, 255, 255, 0.92);
+}
+
+.login-brand-features li {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    font-size: 0.95rem;
+}
+
+.login-brand-features i {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.1rem;
+    height: 2.1rem;
+    flex: 0 0 auto;
+    border-radius: 0.6rem;
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.login-brand-footer {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.85rem;
+    margin: 0;
+}
+
+.login-brand-footer i {
+    margin-right: 0.5rem;
+}
+
+/* Panel derecho: formulario centrado sobre el fondo del tema (light/dark) */
+.login-form-panel {
+    display: flex;
+    flex-direction: column;
+    background: var(--bs-body-bg);
+}
+
+.login-form-wrap {
+    width: 100%;
+    max-width: 400px;
+    margin: auto; /* centra el formulario en el alto disponible */
+    padding: clamp(2rem, 5vh, 3.5rem) 1.5rem;
+}
+
+.login-form-titulo {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 0 0 0.35rem;
+}
+
+.login-form-sub {
+    color: var(--bs-secondary-color); /* se adapta a light/dark */
+    margin: 0 0 1.75rem;
+}
+
+.login-form-wrap .form-control-lg {
+    border-radius: 0.75rem;
+    padding: 0.6rem 1rem;
+}
+
+.login-form-wrap .btn-lg {
+    border-radius: 0.75rem;
+    padding: 0.7rem;
+    font-weight: 600;
+}
+
+/* Encabezado de marca en móvil (<lg): franja a ancho completo */
+.login-brand-compact {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    padding: 1.1rem 1.5rem;
+    color: #fff;
+    background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%);
+}
+
+.login-brand-compact i {
+    font-size: 1.5rem;
+}
+
+.login-brand-logo-sm {
+    max-height: 40px;
+}
+
+.login-brand-compact-texto {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.3;
+}
+
+.login-brand-compact-texto strong {
+    font-size: 1rem;
+}
+
+.login-brand-compact-texto small {
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.login-footer {
+    text-align: center;
+    color: var(--bs-secondary-color);
+    font-size: 0.85rem;
+    margin: 0;
+    padding: 0 1.5rem 1.5rem;
+}
+
+.login-footer i {
+    margin-right: 0.5rem;
+}
+
+@media (max-width: 991.98px) {
+    .login-split {
+        grid-template-columns: 1fr;
+    }
 }
 
 /* ---------- Feedback ---------- */

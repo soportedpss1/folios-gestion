@@ -53,8 +53,10 @@ def test_init_tablas_salta_colspan_en_detalle(auth_client, app, centro):
         'initTable de detail no salta DT en tablas vacías (DataTables tn/18)'
 
 
-def test_init_data_table_global_salta_colspan(auth_client, app):
-    resp = auth_client.get('/entregas/')
+def test_init_datatables_salta_colspan_en_paginas_con_dt(auth_client, app):
+    """El init vive en components/datatables_js.html, servido por las páginas
+    con DataTables (antes era global en base.html)."""
+    resp = auth_client.get('/centros/')
     assert resp.status_code == 200
     assert 'tbody td[colspan]' in resp.get_data(as_text=True), \
-        'init global de base.html no salta DT en tablas vacías (DataTables tn/18)'
+        'init de DataTables no salta DT en tablas vacías (DataTables tn/18)'

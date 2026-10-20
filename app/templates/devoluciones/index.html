@@ -40,11 +40,11 @@
             </div>
             <div class="col-md-2">
                 <label class="form-label small fw-semibold" for="desde">Fecha desde</label>
-                <input type="date" id="desde" name="desde" class="form-control form-control-sm" value="{{ current_desde.isoformat() if current_desde else '' }}">
+                <input type="text" id="desde" name="desde" class="form-control form-control-sm flatpickr" placeholder="dd/mm/aaaa" autocomplete="off" value="{{ current_desde.strftime('%d/%m/%Y') if current_desde else '' }}">
             </div>
             <div class="col-md-2">
                 <label class="form-label small fw-semibold" for="hasta">Fecha hasta</label>
-                <input type="date" id="hasta" name="hasta" class="form-control form-control-sm" value="{{ current_hasta.isoformat() if current_hasta else '' }}">
+                <input type="text" id="hasta" name="hasta" class="form-control form-control-sm flatpickr" placeholder="dd/mm/aaaa" autocomplete="off" value="{{ current_hasta.strftime('%d/%m/%Y') if current_hasta else '' }}">
             </div>
             <div class="col-md-2">
                 <div class="d-flex gap-2">

@@ -82,6 +82,7 @@
                 <h6 class="mb-0 fw-semibold">Información del Folio</h6>
             </div>
             <div class="card-body">
+                <div class="table-responsive">
                 <table class="table table-borderless mb-0">
                     <tr>
                         <td class="text-muted" style="width:40%">Número</td>
@@ -130,6 +131,7 @@
                         <td>{{ (folio.createAt|localtime).strftime('%d/%m/%Y %H:%M') if folio.createAt else '-' }}</td>
                     </tr>
                 </table>
+                </div>
             </div>
         </div>
     </div>
@@ -141,6 +143,7 @@
                 <h6 class="mb-0 fw-semibold"><i class="fas fa-paper-plane me-2 text-danger"></i>Entrega</h6>
             </div>
             <div class="card-body">
+                <div class="table-responsive">
                 <table class="table table-borderless mb-0">
                     <tr>
                         <td class="text-muted" style="width:40%">Centro</td>
@@ -155,6 +158,7 @@
                         <td>{{ folio.entrega.usuario.username }}</td>
                     </tr>
                 </table>
+                </div>
             </div>
         </div>
         {% endif %}
@@ -165,6 +169,7 @@
                 <h6 class="mb-0 fw-semibold"><i class="fas fa-undo me-2 text-success"></i>Devolución</h6>
             </div>
             <div class="card-body">
+                <div class="table-responsive">
                 <table class="table table-borderless mb-0">
                     <tr>
                         <td class="text-muted" style="width:40%">Centro</td>
@@ -179,6 +184,7 @@
                         <td>{{ folio.devolucion.usuario.username }}</td>
                     </tr>
                 </table>
+                </div>
             </div>
         </div>
         {% endif %}

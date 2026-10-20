@@ -1,9 +1,10 @@
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileAllowed, FileField, FileRequired
-from wtforms import DateField, IntegerField, SelectField, SubmitField
+from wtforms import IntegerField, SelectField, SubmitField
 from wtforms.validators import DataRequired, NumberRange
 from datetime import date
 
+from app.form_fields import FechaLatinaField
 from app.services.mensajes import msg_solape
 
 # Tope de folios por recepción: sin él un solo POST puede pedir un rango de
@@ -42,7 +43,7 @@ def detectar_solape(anioCert, tipoCert_id, folioInicial, folioFinal,
 
 
 class RecepcionForm(FlaskForm):
-    fecha = DateField('Fecha de Recepción', validators=[
+    fecha = FechaLatinaField('Fecha de Recepción', validators=[
         DataRequired(message='Seleccione una fecha.'),
     ], default=date.today)
     anioCert = IntegerField('Año del Certificado', validators=[

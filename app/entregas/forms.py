@@ -1,8 +1,9 @@
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileAllowed, FileField, FileRequired
-from wtforms import SelectField, SelectMultipleField, DateField, SubmitField
+from wtforms import SelectField, SelectMultipleField, SubmitField
 from wtforms.validators import DataRequired
 
+from app.form_fields import FechaLatinaField
 from app.utils import coerce_id_opcional
 
 
@@ -10,7 +11,7 @@ class EntregaCreateForm(FlaskForm):
     folio_ids = SelectMultipleField('Folios', coerce=int, validators=[
         DataRequired(message='Seleccione al menos un folio.'),
     ])
-    fechaEntrega = DateField('Fecha de Entrega', validators=[
+    fechaEntrega = FechaLatinaField('Fecha de Entrega', validators=[
         DataRequired(message='Seleccione una fecha.'),
     ])
     centroId = SelectField('Centro de Salud', coerce=coerce_id_opcional,
@@ -22,7 +23,7 @@ class EntregaEditForm(FlaskForm):
     folio_id = SelectField('Folio', coerce=int, validators=[
         DataRequired(message='Seleccione un folio.'),
     ])
-    fechaEntrega = DateField('Fecha de Entrega', validators=[
+    fechaEntrega = FechaLatinaField('Fecha de Entrega', validators=[
         DataRequired(message='Seleccione una fecha.'),
     ])
     centroId = SelectField('Centro de Salud', coerce=int,

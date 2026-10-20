@@ -20,6 +20,23 @@ def a_hora_local(dt):
     return dt.replace(tzinfo=timezone.utc).astimezone().replace(tzinfo=None)
 
 
+def parsear_fecha(valor):
+    """'dd/mm/aaaa' o ISO → date. Vacío o inválido → None.
+
+    dd/mm/aaaa es lo que envía flatpickr (dateFormat d/m/Y); ISO queda como
+    fallback para marcadores de URL e importaciones. Inválido no rompe:
+    el llamador ignora el filtro.
+    """
+    if not valor:
+        return None
+    for formato in ('%d/%m/%Y', '%Y-%m-%d'):
+        try:
+            return datetime.strptime(valor, formato).date()
+        except ValueError:
+            continue
+    return None
+
+
 def coerce_id_opcional(valor):
     """Coerce para SelectField de id con opción placeholder: '' -> None.
 

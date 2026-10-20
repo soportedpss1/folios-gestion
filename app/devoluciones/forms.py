@@ -1,9 +1,10 @@
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileAllowed, FileField, FileRequired
-from wtforms import SelectMultipleField, DateField, SelectField, SubmitField
+from wtforms import SelectMultipleField, SelectField, SubmitField
 from wtforms.validators import DataRequired
 from datetime import date
 
+from app.form_fields import FechaLatinaField
 from app.utils import coerce_id_opcional
 
 
@@ -11,7 +12,7 @@ class DevolucionForm(FlaskForm):
     folio_ids = SelectMultipleField('Folios', coerce=int, validators=[
         DataRequired(message='Seleccione al menos un folio.'),
     ])
-    fechaDevolucion = DateField('Fecha de Devolución', validators=[
+    fechaDevolucion = FechaLatinaField('Fecha de Devolución', validators=[
         DataRequired(message='Seleccione una fecha.'),
     ], default=date.today)
     centroId = SelectField('Centro de Salud', coerce=coerce_id_opcional,
@@ -23,7 +24,7 @@ class DevolucionEditForm(FlaskForm):
     folio_id = SelectField('Folio', coerce=int, validators=[
         DataRequired(message='Seleccione un folio.'),
     ])
-    fechaDevolucion = DateField('Fecha de Devolución', validators=[
+    fechaDevolucion = FechaLatinaField('Fecha de Devolución', validators=[
         DataRequired(message='Seleccione una fecha.'),
     ])
     centroId = SelectField('Centro de Salud', coerce=int,
