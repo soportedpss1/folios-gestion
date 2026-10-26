@@ -30,6 +30,12 @@
                 </button>
             </form>
             {% endif %}
+            {# Form solo si el estado es incoherente — mismo criterio que el
+               chequeo 'estado-inconsistente' de inspecciones (su link
+               "Corregir" cae en esta página). #}
+            {% if (folio.estado == 'entregado' and not folio.entrega)
+               or (folio.estado == 'devuelto' and not folio.devolucion)
+               or (folio.estado == 'disponible' and folio.entrega) %}
             <form method="POST" action="{{ url_for('folios.cambiar_estado', id=folio.id) }}"
                   data-confirm data-title="¿Cambiar el estado del folio?"
                   data-text="Se guardará con registro de auditoría." data-icon="question"
@@ -43,6 +49,7 @@
                 </select>
                 <button type="submit" class="btn btn-sm btn-outline-primary">Guardar estado</button>
             </form>
+            {% endif %}
         {% endif %}
         {% if puede('folios.transferir') and folio.estado == 'entregado' and folio.entrega %}
         <details class="d-inline" {% if form_transfer.errors %}open{% endif %}>

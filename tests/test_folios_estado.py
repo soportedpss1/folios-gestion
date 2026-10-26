@@ -1,7 +1,10 @@
 """Corrección manual de estado del folio desde su detalle."""
 
+from datetime import date
+
 from app.extensions import db
 from app.models.audit_log import AuditLog
+from app.models.entrega_folio import EntregaFolio
 from app.models.folio import Folio
 from tests.conftest import make_folio, make_user
 
@@ -72,3 +75,39 @@ def test_details_oculta_form_a_lectura(app, client, tipo):
                                      'password': 'pass12345'})
     html = client.get(f'/folios/{folio.id}').get_data(as_text=True)
     assert 'name="estado"' not in html
+
+
+def test_details_oculta_form_coherente(auth_client, app, tipo, centro,
+                                       operador):
+    """Sin incoherencia no hay form: el estado no necesita corrección."""
+    folio_ok = make_folio(tipo, numero=7100, rangoId=31, estado='disponible')
+    db.session.commit()
+    folio_ent = make_folio(tipo, numero=7101, rangoId=32, estado='entregado')
+    db.session.flush()
+    db.session.add(EntregaFolio(folio_id=folio_ent.id,
+                                fechaEntrega=date(2026, 3, 1),
+                                centroId=centro.id, userId=operador.id))
+    db.session.commit()
+    for f in (folio_ok, folio_ent):
+        html = auth_client.get(f'/folios/{f.id}').get_data(as_text=True)
+        assert 'name="estado"' not in html, \
+            f'form visible con estado coherente ({f.estado})'
+
+
+def test_details_muestra_form_por_incoherencia(auth_client, app, tipo,
+                                               centro, operador):
+    """Las otras 2 ramas del chequeo siguen mostrando el form: la condición
+    de ocultación no puede exagerar (regression guard del cambio)."""
+    folio_dev = make_folio(tipo, numero=7200, rangoId=33, estado='devuelto')
+    db.session.commit()
+    folio_disp = make_folio(tipo, numero=7201, rangoId=34,
+                            estado='disponible')
+    db.session.flush()
+    db.session.add(EntregaFolio(folio_id=folio_disp.id,
+                                fechaEntrega=date(2026, 3, 1),
+                                centroId=centro.id, userId=operador.id))
+    db.session.commit()
+    for f in (folio_dev, folio_disp):
+        html = auth_client.get(f'/folios/{f.id}').get_data(as_text=True)
+        assert 'name="estado"' in html, \
+            f'sin form pese a incoherencia ({f.estado})'
