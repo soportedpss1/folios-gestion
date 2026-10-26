@@ -1,6 +1,8 @@
 """Registro público de operadores + aprobación por administrador."""
 
 from app.extensions import db
+from app.models.audit_log import AuditLog
+from app.models.permiso_usuario import PermisoUsuario
 from app.models.usuario import Usuario
 from tests.conftest import make_user
 
@@ -107,3 +109,66 @@ def test_login_inactiva_password_mala_es_generico(client, app):
     assert 'Usuario o contraseña incorrectos.' in html
     assert 'no está activa' not in html, \
         'sin contraseña correcta no se filtra el estado de la cuenta'
+
+
+def test_aprobar_activa_cuenta_y_audita(admin_client, app, admin):
+    user = make_inactivo('pendiente3')
+    resp = admin_client.post(f'/usuarios/{user.id}/aprobar',
+                             follow_redirects=True)
+    assert 'Usuario aprobado exitosamente.' in resp.get_data(as_text=True)
+    db.session.refresh(user)
+    assert user.activo is True, 'aprobar no activó la cuenta'
+    log = AuditLog.query.filter_by(
+        accion='UPDATE', tabla='usuarios', registro_id=user.id).one()
+    assert log.user_id == admin.id, 'el audit debe tener al admin como actor'
+    assert log.datos_anteriores == {'activo': False}
+    assert log.datos_nuevos == {'activo': True}
+
+
+def test_aprobar_sin_sesion_no_activa(client, app):
+    user = make_inactivo('pendiente4')
+    resp = client.post(f'/usuarios/{user.id}/aprobar')
+    assert resp.status_code == 302
+    assert db.session.get(Usuario, user.id).activo is False
+
+
+def test_aprobar_operador_sin_permiso_no_activa(auth_client, app):
+    user = make_inactivo('pendiente5')
+    resp = auth_client.post(f'/usuarios/{user.id}/aprobar',
+                            follow_redirects=True)
+    assert 'No tiene permisos' in resp.get_data(as_text=True)
+    db.session.refresh(user)
+    assert user.activo is False
+
+
+def test_aprobar_con_grant_usuarios_gestionar(client, app):
+    lector = make_user('lector_aprueba', 'lectura')
+    db.session.add(PermisoUsuario(user_id=lector.id,
+                                  permiso='usuarios.gestionar'))
+    db.session.commit()
+    user = make_inactivo('pendiente6')
+    client.post('/auth/login',
+                data={'username': 'lector_aprueba', 'password': 'pass12345'})
+    resp = client.post(f'/usuarios/{user.id}/aprobar', follow_redirects=True)
+    assert 'Usuario aprobado exitosamente.' in resp.get_data(as_text=True)
+    db.session.refresh(user)
+    assert user.activo is True, 'un grant de usuarios.gestionar debe aprobar'
+
+
+def test_aprobar_ya_activo_es_idempotente(admin_client, app):
+    activo = make_user('activo_existente', 'operador')
+    resp = admin_client.post(f'/usuarios/{activo.id}/aprobar',
+                             follow_redirects=True)
+    assert 'Ese usuario ya está activo.' in resp.get_data(as_text=True)
+    assert AuditLog.query.filter_by(
+        accion='UPDATE', tabla='usuarios', registro_id=activo.id).count() == 0, \
+        'reaprobación no debe escribir audit'
+
+
+def test_index_muestra_boton_aprobar_solo_inactivos(admin_client, app):
+    inactivo = make_inactivo('pendiente7')
+    html = admin_client.get('/usuarios/').get_data(as_text=True)
+    assert f'aria-label="Aprobar usuario {inactivo.username}"' in html, \
+        'sin botón de aprobación para el inactivo'
+    assert 'Aprobar usuario adminuser' not in html, \
+        'los activos no llevan botón de aprobar'

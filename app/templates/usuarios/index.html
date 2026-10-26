@@ -53,6 +53,14 @@
                         </td>
                         <td>{{ (u.created_at|localtime).strftime('%d/%m/%Y') if u.created_at else '-' }}</td>
                         <td class="text-center">
+                            {% if not u.activo %}
+                            <form method="POST" action="{{ url_for('usuarios.aprobar', id=u.id) }}" class="d-inline" data-confirm data-title="¿Aprobar este usuario? Se activará la cuenta.">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-sm btn-outline-success" title="Aprobar" aria-label="Aprobar usuario {{ u.username }}">
+                                    <i class="fas fa-user-check" aria-hidden="true"></i>
+                                </button>
+                            </form>
+                            {% endif %}
                             <a href="{{ url_for('usuarios.edit', id=u.id) }}" class="btn btn-sm btn-outline-warning" title="Editar" aria-label="Editar usuario {{ u.username }}">
                                 <i class="fas fa-edit" aria-hidden="true"></i>
                             </a>

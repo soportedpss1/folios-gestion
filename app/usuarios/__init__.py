@@ -135,6 +135,28 @@ def edit(id):
     return render_template('usuarios/edit.html', form=form, user=user)
 
 
+@usuarios_bp.route('/<int:id>/aprobar', methods=['POST'])
+@login_required
+@permiso_requerido('usuarios.gestionar')
+def aprobar(id):
+    """Aprueba (= activa) una cuenta creada desde el registro público.
+
+    Idempotente: si ya está activa solo avisa. Sin lógica de último-admin
+    (activar nunca degrada ni desactiva).
+    """
+    user = get_or_404(Usuario, id)
+    if user.activo:
+        flash('Ese usuario ya está activo.', 'info')
+        return redirect(url_for('usuarios.index'))
+
+    user.activo = True
+    log_audit(current_user.id, 'UPDATE', 'usuarios', user.id,
+              {'activo': False}, {'activo': True})
+    db.session.commit()
+    flash('Usuario aprobado exitosamente.', 'success')
+    return redirect(url_for('usuarios.index'))
+
+
 @usuarios_bp.route('/<int:id>/delete', methods=['POST'])
 @login_required
 @permiso_requerido('usuarios.gestionar')
