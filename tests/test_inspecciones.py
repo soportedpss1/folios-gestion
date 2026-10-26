@@ -3,6 +3,7 @@
 from datetime import date
 
 from app.extensions import db
+from app.models.centro import Centro
 from app.models.recepcion_folio import RecepcionFolio
 from app.models.entrega_folio import EntregaFolio
 from app.models.devolucion_folio import DevolucionFolio
@@ -10,6 +11,8 @@ from app.services.inspecciones import (
     CHEQUEOS, entrega_antes_recepcion, devolucion_antes_entrega,
     fechas_futuras, formatear_entrega_antes_recepcion,
     formatear_devolucion_antes_entrega, formatear_fechas_futuras,
+    centro_devolucion_distinto, formatear_centro_devolucion_distinto,
+    rangos_corruptos, formatear_rangos_corruptos,
 )
 from tests.conftest import make_folio
 
@@ -113,3 +116,63 @@ def test_chequeos_incluye_las_tres_claves():
     for c in CHEQUEOS.values():
         assert c['titulo'] and c['descripcion']
         assert callable(c['query']) and callable(c['formatear'])
+
+
+def make_rango(tipo, user, ini, fin, rangoId, anio=2026, fecha=date(2026, 3, 1)):
+    """Recepción sin folios individuales (el chequeo de rangos solo mira
+    recepcion_folios)."""
+    rec = RecepcionFolio(fecha=fecha, anioCert=anio, tipoCert_id=tipo.id,
+                         folioInicial=ini, folioFinal=fin, rangoId=rangoId,
+                         userId=user.id)
+    db.session.add(rec)
+    db.session.commit()
+    return rec
+
+
+def test_centro_devolucion_distinto_detecta(app, tipo, centro, operador):
+    otro = Centro(name='Otro Centro', telefono='555', direccion='Calle 2',
+                  activo=True)
+    db.session.add(otro)
+    db.session.commit()
+    folio = make_cadena(tipo, centro, operador, fecha_ent=date(2026, 3, 1),
+                        fecha_dev=date(2026, 3, 10))
+    folio.devolucion.centroId = otro.id
+    db.session.commit()
+    res = hallazgos(centro_devolucion_distinto(),
+                    formatear_centro_devolucion_distinto)
+    assert len(res) == 1
+    assert res[0]['modulo'] == 'devoluciones'
+    assert res[0]['registro_id'] == folio.devolucion.id
+    assert centro.name in res[0]['detalle'] and otro.name in res[0]['detalle']
+
+
+def test_centro_devolucion_igual_no_alerta(app, tipo, centro, operador):
+    make_cadena(tipo, centro, operador, numero=2000, rangoId=2,
+                fecha_ent=date(2026, 3, 1), fecha_dev=date(2026, 3, 10))
+    assert hallazgos(centro_devolucion_distinto(),
+                     formatear_centro_devolucion_distinto) == []
+
+
+def test_rangos_corruptos_detecta_invertido(app, tipo, operador):
+    make_rango(tipo, operador, ini=500, fin=400, rangoId=10)
+    res = hallazgos(rangos_corruptos(), formatear_rangos_corruptos)
+    assert len(res) == 1
+    assert res[0]['modulo'] == 'recepcion'
+    assert 'invertido' in res[0]['detalle']
+
+
+def test_rangos_corruptos_detecta_solape_sin_duplicar(app, tipo, operador):
+    make_rango(tipo, operador, ini=1, fin=100, rangoId=11)
+    make_rango(tipo, operador, ini=50, fin=150, rangoId=12)   # solapa con 1-100
+    res = hallazgos(rangos_corruptos(), formatear_rangos_corruptos)
+    assert len(res) == 2, 'cada rango del par debe aparecer exactamente una vez'
+    assert all('solapa' in h['detalle'] for h in res)
+    assert {h['registro_id'] for h in res} == {r.id for r in
+           RecepcionFolio.query.order_by(RecepcionFolio.id).all()}
+
+
+def test_rangos_sanos_no_alertan(app, tipo, operador):
+    make_rango(tipo, operador, ini=1, fin=100, rangoId=13)
+    make_rango(tipo, operador, ini=101, fin=200, rangoId=14)  # adyacente no solapa
+    make_rango(tipo, operador, ini=1, fin=100, rangoId=15, anio=2025)  # otro año
+    assert hallazgos(rangos_corruptos(), formatear_rangos_corruptos) == []
