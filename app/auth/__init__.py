@@ -91,7 +91,7 @@ def registro():
             flash(DUP_USUARIO, 'danger')
             return render_template('auth/registro.html', form=form)
 
-        flash('Cuenta creada correctamente. Un administrador debe aprobarla '
+        flash('Cuenta creada exitosamente. Un administrador debe aprobarla '
               'antes de que pueda iniciar sesión.', 'success')
         return redirect(url_for('auth.login'))
 
