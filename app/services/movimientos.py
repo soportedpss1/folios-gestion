@@ -6,6 +6,8 @@ choices y consultas de API evita que un cambio llegue a uno y no al otro.
 Ningún edit cambia de folio: los estados solo los tocan la creación.
 """
 
+from datetime import date
+
 from sqlalchemy import String, cast
 from sqlalchemy.orm import selectinload
 
@@ -164,6 +166,8 @@ def resolver_folios_para_importar(filas, *, estado, excluir_nulos=False):
             error = f'Tipo de certificado desconocido: {nombre or "vacío"}.'
         elif fecha is None:
             error = 'Fecha inválida (use dd/mm/aaaa).'
+        elif fecha > date.today():
+            error = 'La fecha no puede ser posterior a hoy.'
         if error is None:
             if not texto_centro.strip():
                 error = 'Centro de salud vacío.'

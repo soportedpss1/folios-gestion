@@ -4,7 +4,7 @@ from wtforms import SelectMultipleField, SelectField, SubmitField
 from wtforms.validators import DataRequired
 from datetime import date
 
-from app.form_fields import FechaLatinaField
+from app.form_fields import FechaLatinaField, NoFutura
 from app.utils import coerce_id_opcional
 
 
@@ -14,6 +14,7 @@ class DevolucionForm(FlaskForm):
     ])
     fechaDevolucion = FechaLatinaField('Fecha de Devolución', validators=[
         DataRequired(message='Seleccione una fecha.'),
+        NoFutura(),
     ], default=date.today)
     centroId = SelectField('Centro de Salud', coerce=coerce_id_opcional,
                            validators=[DataRequired(message='Seleccione el centro de salud.')])
@@ -26,6 +27,7 @@ class DevolucionEditForm(FlaskForm):
     ])
     fechaDevolucion = FechaLatinaField('Fecha de Devolución', validators=[
         DataRequired(message='Seleccione una fecha.'),
+        NoFutura(),
     ])
     centroId = SelectField('Centro de Salud', coerce=int,
                            validators=[DataRequired(message='Seleccione el centro de salud.')])

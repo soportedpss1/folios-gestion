@@ -157,7 +157,7 @@ def parsear_confirmacion(payload_raw):
                                  or uid <= 0):
             return None, invalido
         fecha = a_fecha(dato.get('fecha'))
-        if fecha is None:
+        if fecha is None or fecha > date.today():
             return None, invalido
         centro_id = a_entero(dato.get('centroId'))
         if centro_id is None or centro_id <= 0:

@@ -4,7 +4,7 @@ from wtforms import IntegerField, SelectField, SubmitField
 from wtforms.validators import DataRequired, NumberRange
 from datetime import date
 
-from app.form_fields import FechaLatinaField
+from app.form_fields import FechaLatinaField, NoFutura
 from app.services.mensajes import msg_solape
 
 # Tope de folios por recepción: sin él un solo POST puede pedir un rango de
@@ -45,6 +45,7 @@ def detectar_solape(anioCert, tipoCert_id, folioInicial, folioFinal,
 class RecepcionForm(FlaskForm):
     fecha = FechaLatinaField('Fecha de Recepción', validators=[
         DataRequired(message='Seleccione una fecha.'),
+        NoFutura(),
     ], default=date.today)
     anioCert = IntegerField('Año del Certificado', validators=[
         DataRequired(message='Este campo es obligatorio.'),

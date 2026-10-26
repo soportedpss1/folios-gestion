@@ -460,6 +460,8 @@ def _validar_filas_recepcion(filas):
         usuario = None
         if fecha is None:
             error = 'Fecha inválida.'
+        elif fecha > date.today():
+            error = 'La fecha no puede ser posterior a hoy.'
         elif anio is None or not 2000 <= anio <= 2100:
             error = 'Año fuera de rango (2000-2100).'
         elif tipo_id is None:
@@ -544,6 +546,12 @@ def _payload_recepcion(raw):
                 or fila['folioFinal'] < fila['folioInicial'] \
                 or not 2000 <= fila['anioCert'] <= 2100 \
                 or total > MAX_FOLIOS_POR_RECEPCION:
+            return None
+        # Fecha futura (hidden editable): el límite es hoy, igual que en el
+        # form y en el preview. No parseable → la deja caer el
+        # date.fromisoformat de importar_confirmar (fallido por fila, como antes).
+        fecha = import_excel.a_fecha(fila['fecha'])
+        if fecha is not None and fecha > date.today():
             return None
         limpio.append(fila)
     return limpio
