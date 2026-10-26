@@ -37,7 +37,11 @@ migración ni cambio de modelo: el estado de aprobación es el propio flag
   `set_password`. `activo=False` explícito (el default de columna es `True`).
 - Duplicados (username|email en consulta previa, e `IntegrityError` por
   carrera): mensaje existente `DUP_USUARIO`, re-render del form.
-- Rate limit propio: `@limiter.limit("5/minute")` (login es 10/min).
+- Rate limit propio: `@limiter.limit("5/minute", methods=["POST"])` — solo el
+  POST consume cuota (login es 10/min sobre todo método; aquí el GET del
+  formulario no debe quemar el límite de un usuario que solo abre la página).
+- Visitante ya autenticado que abre `/auth/registro` → redirect a
+  `dashboard.index` (espejo del guard de `login`).
 - Éxito → `flash('Cuenta creada correctamente. Un administrador debe aprobarla
   antes de que pueda iniciar sesión.', 'success')` → redirect `/auth/login`.
 - Auditoría: `log_audit(user.id, 'INSERT', 'usuarios', user.id, None,
@@ -124,7 +128,8 @@ Mensaje combinado:
 5. Registro duplicado (username o email) → `DUP_USUARIO`, no crea.
 6. Registro con datos inválidos (email malformado, contraseña corta, confirm
    desigual) → no crea.
-7. Rate limit de registro 5/min (`limiter_client`).
+7. Rate limit de registro (`limiter_client`): 6º POST → 429; GET del
+   formulario sigue en 200 después del límite.
 8. Aprobar: admin activa la cuenta + flash + `audit_logs` UPDATE con actor
    admin.
 9. `POST /aprobar` sin sesión → 302 sin activar; con operador (sin permiso) →
@@ -132,3 +137,5 @@ Mensaje combinado:
 10. Aprobar usuario ya activo → mensaje "ya está activo", sin audit nuevo.
 11. `/usuarios` muestra el botón "Aprobar" a un admin, solo para inactivos.
 12. Registro deja `audit_logs` INSERT con actor = usuario nuevo.
+13. No-admin con grant `usuarios.gestionar` aprueba con éxito (los grants
+    suman capacidad; aprobar no es escalada).
