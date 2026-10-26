@@ -10,7 +10,7 @@ del módulo dueño (URLS_CORREGIR).
 from collections import OrderedDict
 from datetime import date
 
-from sqlalchemy import literal, or_
+from sqlalchemy import and_, literal, or_
 from sqlalchemy.orm import aliased
 
 from app.extensions import db
@@ -202,6 +202,54 @@ def formatear_rangos_corruptos(row):
     }
 
 
+def estado_inconsistente():
+    """Folios cuyo estado no coincide con sus registros de entrega/devolución.
+
+    El estado 'perdido' no entra en ninguna rama: su recuperación deriva del
+    registro de entrega, no del campo estado (por diseño, fuera de alcance).
+    """
+    con_entrega = (
+        db.session.query(EntregaFolio)
+        .filter(EntregaFolio.folio_id == Folio.id)
+        .exists()
+    )
+    con_devolucion = (
+        db.session.query(DevolucionFolio)
+        .filter(DevolucionFolio.folio_id == Folio.id)
+        .exists()
+    )
+    return (
+        db.session.query(
+            Folio.id.label('registro_id'),
+            Folio.folio,
+            Folio.estado,
+            con_entrega.label('tiene_entrega'),
+            con_devolucion.label('tiene_devolucion'),
+        )
+        .filter(or_(
+            and_(Folio.estado == 'entregado', ~con_entrega),
+            and_(Folio.estado == 'devuelto', ~con_devolucion),
+            and_(Folio.estado == 'disponible', con_entrega),
+        ))
+        .order_by(Folio.id)
+    )
+
+
+def formatear_estado_inconsistente(row):
+    if row.estado == 'entregado':
+        detalle = "Estado 'entregado' sin registro de entrega"
+    elif row.estado == 'devuelto':
+        detalle = "Estado 'devuelto' sin registro de devolución"
+    else:
+        detalle = "Estado 'disponible' con entrega registrada"
+    return {
+        'titulo': f'Folio {row.folio}',
+        'detalle': detalle,
+        'modulo': 'folios',
+        'registro_id': row.registro_id,
+    }
+
+
 CHEQUEOS = OrderedDict([
     ('entrega-antes-recepcion', {
         'titulo': 'Entrega anterior a la recepción',
@@ -240,5 +288,13 @@ CHEQUEOS = OrderedDict([
                         'certificado.'),
         'query': rangos_corruptos,
         'formatear': formatear_rangos_corruptos,
+    }),
+    ('estado-inconsistente', {
+        'titulo': 'Estado del folio sin coherencia',
+        'descripcion': ('Folios en estado entregado sin entrega registrada, '
+                        'devueltos sin devolución, o disponibles con una '
+                        'entrega registrada.'),
+        'query': estado_inconsistente,
+        'formatear': formatear_estado_inconsistente,
     }),
 ])

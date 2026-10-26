@@ -13,6 +13,7 @@ from app.services.inspecciones import (
     formatear_devolucion_antes_entrega, formatear_fechas_futuras,
     centro_devolucion_distinto, formatear_centro_devolucion_distinto,
     rangos_corruptos, formatear_rangos_corruptos,
+    estado_inconsistente, formatear_estado_inconsistente,
 )
 from tests.conftest import make_folio
 
@@ -176,3 +177,48 @@ def test_rangos_sanos_no_alertan(app, tipo, operador):
     make_rango(tipo, operador, ini=101, fin=200, rangoId=14)  # adyacente no solapa
     make_rango(tipo, operador, ini=1, fin=100, rangoId=15, anio=2025)  # otro año
     assert hallazgos(rangos_corruptos(), formatear_rangos_corruptos) == []
+
+
+def test_estado_entregado_sin_entrega_detectado(app, tipo, centro, operador):
+    folio = make_cadena(tipo, centro, operador, numero=5000, rangoId=20,
+                        estado='entregado')            # sin fila de entrega
+    res = hallazgos(estado_inconsistente(), formatear_estado_inconsistente)
+    assert len(res) == 1
+    assert res[0]['modulo'] == 'folios'
+    assert res[0]['registro_id'] == folio.id
+    assert "sin registro de entrega" in res[0]['detalle']
+
+
+def test_estado_devuelto_sin_devolucion_detectado(app, tipo, centro, operador):
+    folio = make_cadena(tipo, centro, operador, numero=5001, rangoId=21,
+                        fecha_ent=date(2026, 3, 1))   # estado 'entregado'
+    folio.estado = 'devuelto'                          # sin fila de devolución
+    db.session.commit()
+    res = hallazgos(estado_inconsistente(), formatear_estado_inconsistente)
+    assert len(res) == 1 and res[0]['registro_id'] == folio.id
+    assert "sin registro de devolución" in res[0]['detalle']
+
+
+def test_estado_disponible_con_entrega_detectado(app, tipo, centro, operador):
+    folio = make_cadena(tipo, centro, operador, numero=5002, rangoId=22,
+                        fecha_ent=date(2026, 3, 1), estado='disponible')
+    res = hallazgos(estado_inconsistente(), formatear_estado_inconsistente)
+    assert len(res) == 1 and res[0]['registro_id'] == folio.id
+    assert 'con entrega registrada' in res[0]['detalle']
+
+
+def test_estados_coherentes_y_perdido_no_alertan(app, tipo, centro, operador):
+    make_cadena(tipo, centro, operador, numero=6001, rangoId=23)   # disponible solo
+    make_cadena(tipo, centro, operador, numero=6002, rangoId=24,
+                fecha_ent=date(2026, 3, 1))                       # entregado ok
+    make_cadena(tipo, centro, operador, numero=6003, rangoId=25,
+                fecha_ent=date(2026, 3, 1), fecha_dev=date(2026, 3, 10))  # devuelto ok
+    make_cadena(tipo, centro, operador, numero=6004, rangoId=26,
+                fecha_ent=date(2026, 3, 1), estado='perdido')      # fuera de alcance
+    assert hallazgos(estado_inconsistente(),
+                     formatear_estado_inconsistente) == []
+
+
+def test_chequeos_completos_son_seis():
+    assert len(CHEQUEOS) == 6
+    assert list(CHEQUEOS)[-1] == 'estado-inconsistente'
