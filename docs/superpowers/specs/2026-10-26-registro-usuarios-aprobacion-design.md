@@ -42,8 +42,10 @@ migración ni cambio de modelo: el estado de aprobación es el propio flag
   formulario no debe quemar el límite de un usuario que solo abre la página).
 - Visitante ya autenticado que abre `/auth/registro` → redirect a
   `dashboard.index` (espejo del guard de `login`).
-- Éxito → `flash('Cuenta creada correctamente. Un administrador debe aprobarla
-  antes de que pueda iniciar sesión.', 'success')` → redirect `/auth/login`.
+- Éxito → `flash('Cuenta creada exitosamente. Un administrador debe aprobarla
+  antes de que pueda iniciar sesión.', 'success')` → redirect `/auth/login`
+  ("exitosamente", no "correctamente": lo exige el test de homogeneidad de
+  toasts `test_ui_lote5::test_flashes_sin_correctamente`).
 - Auditoría: `log_audit(user.id, 'INSERT', 'usuarios', user.id, None,
   {username, email, rol, activo: False})` tras `flush()` — actor = usuario
   nuevo (único posible viniendo de anónimo).

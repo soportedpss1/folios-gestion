@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - Textos de usuario en **español**, exactos según spec:
-  - Registro éxito: `Cuenta creada correctamente. Un administrador debe aprobarla antes de que pueda iniciar sesión.` (flash `success`)
+  - Registro éxito: `Cuenta creada exitosamente. Un administrador debe aprobarla antes de que pueda iniciar sesión.` (flash `success`; "exitosamente" lo exige `test_flashes_sin_correctamente`)
   - Login inactiva + contraseña correcta: `Su cuenta no está activa. Si acaba de registrarse, un administrador debe aprobarla. Contacte al administrador del sistema.` (flash `warning`)
   - Aprobar éxito: `Usuario aprobado exitosamente.` (flash `success`)
   - Aprobar ya activo: `Ese usuario ya está activo.` (flash `info`)
