@@ -1,12 +1,14 @@
 """Chequeos de coherencia del módulo de inspecciones."""
 
 from datetime import date
+import re
 
 from app.extensions import db
 from app.models.centro import Centro
 from app.models.recepcion_folio import RecepcionFolio
 from app.models.entrega_folio import EntregaFolio
 from app.models.devolucion_folio import DevolucionFolio
+from app.models.permiso_usuario import PermisoUsuario
 from app.services.inspecciones import (
     CHEQUEOS, entrega_antes_recepcion, devolucion_antes_entrega,
     fechas_futuras, formatear_entrega_antes_recepcion,
@@ -15,7 +17,7 @@ from app.services.inspecciones import (
     rangos_corruptos, formatear_rangos_corruptos,
     estado_inconsistente, formatear_estado_inconsistente,
 )
-from tests.conftest import make_folio
+from tests.conftest import make_folio, make_user
 
 
 def make_cadena(tipo, centro, user, *, numero=1000, rangoId=1,
@@ -222,3 +224,109 @@ def test_estados_coherentes_y_perdido_no_alertan(app, tipo, centro, operador):
 def test_chequeos_completos_son_seis():
     assert len(CHEQUEOS) == 6
     assert list(CHEQUEOS)[-1] == 'estado-inconsistente'
+
+
+CHEQUEO_CLAVES = ['entrega-antes-recepcion', 'devolucion-antes-entrega',
+                  'fechas-futuras', 'centro-devolucion-distinto',
+                  'rangos-corruptos', 'estado-inconsistente']
+
+
+def test_index_muestra_los_seis_chequeos(admin_client, app):
+    # La spec da link solo con hallazgos: en DB limpia se pinesa la tarjeta
+    # (título) y que las 6 claves sean ruteables (200 con vacío).
+    html = admin_client.get('/inspecciones/').get_data(as_text=True)
+    for clave in CHEQUEO_CLAVES:
+        assert CHEQUEOS[clave]['titulo'] in html, f'falta tarjeta {clave}'
+        assert admin_client.get(f'/inspecciones/{clave}').status_code == 200, \
+            f'detalle no ruteable: {clave}'
+    assert 'Sin inconsistencias' in html, 'DB limpia → tarjetas verdes'
+
+
+def test_index_enlaza_detalle_con_hallazgo(app, tipo, centro, operador,
+                                           admin_client):
+    make_cadena(tipo, centro, operador, fecha_rec=date(2026, 3, 10),
+                fecha_ent=date(2026, 3, 1))
+    html = admin_client.get('/inspecciones/').get_data(as_text=True)
+    assert '/inspecciones/entrega-antes-recepcion' in html
+
+
+def test_detalle_muestra_hallazgo_y_link_corregir(app, tipo, centro, operador,
+                                                  admin_client):
+    make_cadena(tipo, centro, operador, fecha_rec=date(2026, 3, 10),
+                fecha_ent=date(2026, 3, 1))
+    entrega = EntregaFolio.query.one()
+    html = admin_client.get('/inspecciones/entrega-antes-recepcion') \
+        .get_data(as_text=True)
+    assert f'/entregas/{entrega.id}/edit' in html, 'sin link de corrección'
+    assert '01/03/2026' in html and '10/03/2026' in html
+
+
+def test_fechas_futuras_link_por_modulo(app, tipo, centro, operador, admin_client):
+    make_cadena(tipo, centro, operador, numero=1000, rangoId=1,
+                fecha_rec=date(2027, 1, 1))
+    f_ent = make_cadena(tipo, centro, operador, numero=2000, rangoId=2,
+                        fecha_rec=date(2026, 3, 1), fecha_ent=date(2027, 1, 1))
+    f_dev = make_cadena(tipo, centro, operador, numero=3000, rangoId=3,
+                        fecha_rec=date(2026, 3, 1), fecha_ent=date(2026, 3, 1),
+                        fecha_dev=date(2027, 1, 1))
+    # Cada make_cadena crea su recepción: la futura es la de rangoId=1.
+    rec = RecepcionFolio.query.filter_by(rangoId=1).one()
+    ent, dev = f_ent.entrega, f_dev.devolucion
+    html = admin_client.get('/inspecciones/fechas-futuras') \
+        .get_data(as_text=True)
+    assert f'/recepcion/{rec.id}/edit' in html
+    assert f'/entregas/{ent.id}/edit' in html
+    assert f'/devoluciones/{dev.id}/edit' in html
+
+
+def test_detalle_404_clave_desconocida(admin_client, app):
+    assert admin_client.get('/inspecciones/no-existe').status_code == 404
+
+
+def test_detalle_pagina_estable(app, tipo, centro, operador, admin_client):
+    # 26 hallazgos: 25 en página 1, el 26º solo en la 2 (order_by estable).
+    for n in range(26):
+        make_cadena(tipo, centro, operador, numero=1000 + n, rangoId=100 + n,
+                    fecha_rec=date(2026, 3, 10), fecha_ent=date(2026, 3, 1))
+    p1 = admin_client.get('/inspecciones/entrega-antes-recepcion') \
+        .get_data(as_text=True)
+    p2 = admin_client.get('/inspecciones/entrega-antes-recepcion?page=2') \
+        .get_data(as_text=True)
+    assert 'Folio 1000' in p1 and 'Folio 1000' not in p2
+    assert 'Folio 1025' in p2 and 'Folio 1025' not in p1
+    assert len(re.findall(r'/entregas/\d+/edit', p1)) == 25
+
+
+def test_sin_permiso_redirige_a_dashboard(app, client):
+    lectura = make_user('lectura_insp', 'lectura')
+    client.post('/auth/login', data={'username': lectura.username,
+                                     'password': 'pass12345'})
+    for url in ('/inspecciones/', '/inspecciones/fechas-futuras'):
+        resp = client.get(url)
+        assert resp.status_code == 302
+        assert '/dashboard' in resp.headers['Location']
+
+
+def test_grant_inspecciones_ver_permite_ver(app, client):
+    lectura = make_user('lectura_insp2', 'lectura')
+    db.session.add(PermisoUsuario(user_id=lectura.id,
+                                  permiso='inspecciones.ver'))
+    db.session.commit()
+    client.post('/auth/login', data={'username': lectura.username,
+                                     'password': 'pass12345'})
+    assert client.get('/inspecciones/').status_code == 200
+
+
+def test_sidebar_link_visible_para_admin(admin_client, app):
+    html = admin_client.get('/dashboard/').get_data(as_text=True)
+    assert '/inspecciones/' in html, 'admin debe ver el link'
+
+
+def test_sidebar_link_oculto_para_lectura_sin_grant(app, client):
+    # Dos usuarios autenticados en el mismo test chocan con g._login_user:
+    # este test solo loguea a la lectura (regla de un usuario por test).
+    lectura = make_user('lectura_insp3', 'lectura')
+    client.post('/auth/login', data={'username': lectura.username,
+                                     'password': 'pass12345'})
+    html = client.get('/dashboard/').get_data(as_text=True)
+    assert '/inspecciones/' not in html, 'lector sin grant no ve el link'

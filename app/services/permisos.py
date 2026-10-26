@@ -24,6 +24,7 @@ PERMISOS = {
     'folios.importar': ('Importar folios desde Excel', 'admin'),
     'certificados.gestionar': ('Gestionar tipos de certificado', 'admin'),
     'auditoria.ver': ('Ver auditoría', 'admin'),
+    'inspecciones.ver': ('Ver inspecciones de datos', 'admin'),
     'sincronizacion.usar': ('Usar sincronización con Google Sheets', 'admin'),
     'recepcion.crear': ('Crear recepciones', 'admin'),
     'recepcion.gestionar': ('Editar/eliminar recepciones', 'admin'),

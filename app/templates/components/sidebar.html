@@ -122,6 +122,15 @@
         </li>
         {% endif %}
 
+        {% if puede('inspecciones.ver') %}
+        <li class="nav-item mb-1">
+            <a class="nav-link text-white-50 {% if request.endpoint and 'inspecciones' in request.endpoint %}active{% endif %}"
+               href="{{ url_for('inspecciones.index') }}">
+                <i class="fas fa-clipboard-check me-2"></i> Inspecciones
+            </a>
+        </li>
+        {% endif %}
+
         {% if puede('sincronizacion.usar') %}
         <li class="nav-item mb-1">
             <a class="nav-link text-white-50 {% if request.endpoint and 'sincronizacion' in request.endpoint %}active{% endif %}"
