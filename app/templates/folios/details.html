@@ -30,8 +30,21 @@
                 </button>
             </form>
             {% endif %}
+            <form method="POST" action="{{ url_for('folios.cambiar_estado', id=folio.id) }}"
+                  data-confirm data-title="¿Cambiar el estado del folio?"
+                  data-text="Se guardará con registro de auditoría." data-icon="question"
+                  class="d-flex gap-1 align-items-center">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <select name="estado" class="form-select form-select-sm w-auto"
+                        aria-label="Estado del folio">
+                    <option value="disponible" {% if folio.estado == 'disponible' %}selected{% endif %}>Disponible</option>
+                    <option value="entregado" {% if folio.estado == 'entregado' %}selected{% endif %}>Entregado</option>
+                    <option value="devuelto" {% if folio.estado == 'devuelto' %}selected{% endif %}>Devuelto</option>
+                </select>
+                <button type="submit" class="btn btn-sm btn-outline-primary">Guardar estado</button>
+            </form>
         {% endif %}
-        {% if puede('folios.transferir') and folio.estado == 'entregado' %}
+        {% if puede('folios.transferir') and folio.estado == 'entregado' and folio.entrega %}
         <details class="d-inline" {% if form_transfer.errors %}open{% endif %}>
             <summary class="btn btn-outline-primary" style="cursor:pointer;">
                 <i class="fas fa-exchange-alt me-1" aria-hidden="true"></i>Transferir

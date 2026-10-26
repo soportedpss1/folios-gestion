@@ -266,7 +266,7 @@ def _destino_de_recuperacion(folio):
     return 'entregado' if folio.entrega is not None else 'disponible'
 
 
-def _cambiar_estado_perdido(folio, destino):
+def _cambiar_estado(folio, destino):
     """Transición del estado del folio con auditoría (el llamador valida)."""
     old = {'estado': folio.estado}
     folio.estado = destino
@@ -282,7 +282,7 @@ def perder(id):
         flash('Solo se pueden marcar como perdidos folios disponibles '
               'o entregados.', 'danger')
         return redirect(url_for('folios.details', id=folio.id))
-    _cambiar_estado_perdido(folio, 'perdido')
+    _cambiar_estado(folio, 'perdido')
     db.session.commit()
     flash('Folio marcado como perdido.', 'success')
     return redirect(url_for('folios.details', id=folio.id))
@@ -295,9 +295,35 @@ def recuperar(id):
     if folio.estado != 'perdido':
         flash('Solo los folios perdidos se pueden recuperar.', 'danger')
         return redirect(url_for('folios.details', id=folio.id))
-    _cambiar_estado_perdido(folio, _destino_de_recuperacion(folio))
+    _cambiar_estado(folio, _destino_de_recuperacion(folio))
     db.session.commit()
     flash('Folio recuperado.', 'success')
+    return redirect(url_for('folios.details', id=folio.id))
+
+
+# --- corrección manual de estado (sin entrega/devolución que lo justifique) ---
+
+ESTADOS_CORREGIBLES = ('disponible', 'entregado', 'devuelto')
+
+
+@folios_bp.route('/<int:id>/estado', methods=['POST'])
+@permiso_requerido('folios.actualizar', hacia='blueprint')
+def cambiar_estado(id):
+    """Corrige a mano el estado del folio (auditado; 'perdido' no entra:
+
+    su marcaje y recuperación son un flujo propio con reglas derivadas del
+    registro de entrega)."""
+    folio = get_or_404(Folio, id)
+    nuevo = request.form.get('estado', '').strip()
+    if nuevo not in ESTADOS_CORREGIBLES:
+        flash('Estado inválido.', 'danger')
+        return redirect(url_for('folios.details', id=folio.id))
+    if nuevo == folio.estado:
+        flash('Ese ya es el estado del folio.', 'info')
+        return redirect(url_for('folios.details', id=folio.id))
+    _cambiar_estado(folio, nuevo)
+    db.session.commit()
+    flash('Estado actualizado exitosamente.', 'success')
     return redirect(url_for('folios.details', id=folio.id))
 
 
