@@ -84,3 +84,26 @@ def test_registro_deja_audit_insert(client, app):
         user_id=user.id, accion='INSERT', tabla='usuarios',
         registro_id=user.id).one()
     assert log.datos_nuevos['activo'] is False
+
+
+def test_login_cuenta_inactiva_mensaje_combinado(client, app):
+    make_inactivo('pendiente1')
+    resp = client.post('/auth/login', data={
+        'username': 'pendiente1', 'password': 'pass12345',
+    }, follow_redirects=True)
+    html = resp.get_data(as_text=True)
+    assert ('Su cuenta no está activa. Si acaba de registrarse, un '
+            'administrador debe aprobarla') in html, \
+        'falta el mensaje combinado para cuenta inactiva'
+    assert client.get('/dashboard/').status_code == 302, 'creó sesión igual'
+
+
+def test_login_inactiva_password_mala_es_generico(client, app):
+    make_inactivo('pendiente2')
+    resp = client.post('/auth/login', data={
+        'username': 'pendiente2', 'password': 'mala',
+    }, follow_redirects=True)
+    html = resp.get_data(as_text=True)
+    assert 'Usuario o contraseña incorrectos.' in html
+    assert 'no está activa' not in html, \
+        'sin contraseña correcta no se filtra el estado de la cuenta'

@@ -34,14 +34,20 @@ def login():
     form = LoginForm()
     if form.validate_on_submit():
         user = Usuario.query.filter_by(username=form.username.data).first()
-        if user and user.check_password(form.password.data) and user.activo:
-            login_user(user)
-            session.permanent = True  # aplica PERMANENT_SESSION_LIFETIME (timeout de sesión)
-            flash('Sesión iniciada exitosamente.', 'success')
-            next_page = request.args.get('next')
-            if not _is_safe_next(next_page):
-                next_page = url_for('dashboard.index')
-            return redirect(next_page)
+        if user and user.check_password(form.password.data):
+            if user.activo:
+                login_user(user)
+                session.permanent = True  # aplica PERMANENT_SESSION_LIFETIME (timeout de sesión)
+                flash('Sesión iniciada exitosamente.', 'success')
+                next_page = request.args.get('next')
+                if not _is_safe_next(next_page):
+                    next_page = url_for('dashboard.index')
+                return redirect(next_page)
+            # Contraseña correcta pero cuenta sin aprobar/desactivada: mensaje
+            # combinado (con activo solo no se distingue pendiente de baja).
+            flash('Su cuenta no está activa. Si acaba de registrarse, un '
+                  'administrador debe aprobarla. Contacte al administrador '
+                  'del sistema.', 'warning')
         else:
             flash('Usuario o contraseña incorrectos.', 'danger')
 
