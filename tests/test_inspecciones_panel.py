@@ -95,3 +95,50 @@ def test_entregas_edit_post_normal_no_es_json(admin_client, app, tipo, centro,
     assert resp.status_code == 302
     assert '/entregas' in resp.headers['Location']
     assert resp.mimetype != 'application/json'
+
+
+def _devolucion(tipo, centro, operador, numero=8100, rangoId=50):
+    folio = make_folio(tipo, anio=2026, numero=numero, rangoId=rangoId,
+                       estado='devuelto')
+    db.session.flush()
+    dev = DevolucionFolio(folio_id=folio.id,
+                          fechaDevolucion=date(2026, 3, 10),
+                          centroId=centro.id, userId=operador.id)
+    db.session.add(dev)
+    db.session.commit()
+    return dev
+
+
+def test_devoluciones_edit_json_get_campos(admin_client, app, tipo, centro,
+                                           operador):
+    dev = _devolucion(tipo, centro, operador)
+    data = admin_client.get(f'/devoluciones/{dev.id}/edit',
+                            headers=JSON).get_json()
+    assert data['ok'] is True
+    assert 'name="fechaDevolucion"' in data['campos_html']
+    assert 'csrf_token' not in data['campos_html']
+
+
+def test_devoluciones_edit_json_post_ok(admin_client, app, tipo, centro,
+                                        operador):
+    dev = _devolucion(tipo, centro, operador, numero=8101, rangoId=51)
+    resp = admin_client.post(
+        f'/devoluciones/{dev.id}/edit', headers=JSON,
+        data={'folio_id': dev.folio_id, 'fechaDevolucion': '05/03/2026',
+              'centroId': centro.id})
+    assert resp.get_json() == {'ok': True}
+    assert db.session.get(DevolucionFolio, dev.id).fechaDevolucion == date(2026, 3, 5)
+    assert AuditLog.query.filter_by(accion='UPDATE', tabla='devolucion_folios',
+                                    registro_id=dev.id).count() == 1
+
+
+def test_devoluciones_edit_json_post_fecha_futura(admin_client, app, tipo,
+                                                  centro, operador):
+    dev = _devolucion(tipo, centro, operador, numero=8102, rangoId=52)
+    resp = admin_client.post(
+        f'/devoluciones/{dev.id}/edit', headers=JSON,
+        data={'folio_id': dev.folio_id, 'fechaDevolucion': '01/01/2030',
+              'centroId': centro.id})
+    assert resp.status_code == 400
+    assert 'posterior a hoy' in resp.get_json()['errores']['fechaDevolucion']
+    assert db.session.get(DevolucionFolio, dev.id).fechaDevolucion == date(2026, 3, 10)

@@ -17,7 +17,7 @@ from app.services import movimientos as mov
 from app.services.audit import log_audit
 from app.services.mensajes import REFRESQUE_INTENTE
 from app.services.queries import get_or_404, usuario_activo
-from app.utils import plural, parsear_fecha
+from app.utils import plural, parsear_fecha, quiere_json
 from app.decorators import permiso_requerido
 
 devoluciones_bp = Blueprint('devoluciones', __name__, url_prefix='/devoluciones')
@@ -148,6 +148,9 @@ def edit(id):
         form.folio_id.data = devolucion.folio_id
         form.fechaDevolucion.data = devolucion.fechaDevolucion
         form.centroId.data = devolucion.centroId
+        if quiere_json():
+            return jsonify(ok=True, campos_html=render_template(
+                'devoluciones/_form.html', form=form, devolucion=devolucion))
 
     if form.validate_on_submit():
         try:
@@ -158,13 +161,22 @@ def edit(id):
             db.session.commit()
         except IntegrityError:
             db.session.rollback()
+            if quiere_json():
+                return jsonify(ok=False, error='Conflicto de concurrencia al '
+                              'actualizar la devolución. Refresque la lista '
+                              'e intente de nuevo.'), 400
             flash('Conflicto de concurrencia al actualizar la devolución. '
                   'Refresque la lista e intente de nuevo.', 'danger')
             return render_template('devoluciones/edit.html', form=form, devolucion=devolucion)
 
+        if quiere_json():
+            return jsonify(ok=True)
         flash('Devolución actualizada exitosamente.', 'success')
         return redirect(url_for('devoluciones.index'))
 
+    if quiere_json():
+        return jsonify(ok=False, errores={k: v[0]
+                                         for k, v in form.errors.items()}), 400
     return render_template('devoluciones/edit.html', form=form, devolucion=devolucion)
 
 
