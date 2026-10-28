@@ -8,7 +8,8 @@ from flask import Blueprint, abort, render_template, request, url_for
 from flask_login import login_required
 
 from app.decorators import permiso_requerido
-from app.services.inspecciones import CHEQUEOS, URLS_CORREGIR
+from app.services.inspecciones import (CHEQUEOS, URLS_CORREGIR,
+                                       PERMISOS_EDITAR)
 
 inspecciones_bp = Blueprint('inspecciones', __name__, url_prefix='/inspecciones')
 
@@ -36,7 +37,13 @@ def detalle(clave):
     for row in pag.items:
         h = chequeo['formatear'](row)
         h['url'] = url_for(URLS_CORREGIR[h['modulo']], id=h['registro_id'])
+        # El panel de estado apunta al endpoint JSON de cambio de estado;
+        # el link plano (sin permiso de edición) sigue a details, donde
+        # vive el form de estado condicional.
+        h['url_panel'] = (
+            url_for('folios.cambiar_estado', id=h['registro_id'])
+            if h['modulo'] == 'folios' else h['url'])
         hallazgos.append(h)
     return render_template('inspecciones/detalle.html', clave=clave,
                            chequeo=chequeo, hallazgos=hallazgos,
-                           pagination=pag)
+                           pagination=pag, PERMISOS_EDITAR=PERMISOS_EDITAR)

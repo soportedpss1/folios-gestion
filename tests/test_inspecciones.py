@@ -257,7 +257,7 @@ def test_detalle_muestra_hallazgo_y_link_corregir(app, tipo, centro, operador,
     entrega = EntregaFolio.query.one()
     html = admin_client.get('/inspecciones/entrega-antes-recepcion') \
         .get_data(as_text=True)
-    assert f'/entregas/{entrega.id}/edit' in html, 'sin link de corrección'
+    assert f'data-url="/entregas/{entrega.id}/edit"' in html, 'sin panel'
     assert '01/03/2026' in html and '10/03/2026' in html
 
 
@@ -274,9 +274,9 @@ def test_fechas_futuras_link_por_modulo(app, tipo, centro, operador, admin_clien
     ent, dev = f_ent.entrega, f_dev.devolucion
     html = admin_client.get('/inspecciones/fechas-futuras') \
         .get_data(as_text=True)
-    assert f'/recepcion/{rec.id}/edit' in html
-    assert f'/entregas/{ent.id}/edit' in html
-    assert f'/devoluciones/{dev.id}/edit' in html
+    assert f'data-url="/recepcion/{rec.id}/edit"' in html
+    assert f'data-url="/entregas/{ent.id}/edit"' in html
+    assert f'data-url="/devoluciones/{dev.id}/edit"' in html
 
 
 def test_detalle_404_clave_desconocida(admin_client, app):

@@ -1,5 +1,6 @@
 """Paneles de corrección: modo JSON en las rutas dueñas."""
 
+import re
 from datetime import date
 
 from app.extensions import db
@@ -8,11 +9,12 @@ from app.models.centro import Centro
 from app.models.devolucion_folio import DevolucionFolio
 from app.models.entrega_folio import EntregaFolio
 from app.models.folio import Folio
+from app.models.permiso_usuario import PermisoUsuario
 from app.models.recepcion_folio import RecepcionFolio
 from app.services.inspecciones import (rangos_corruptos,
                                        formatear_rangos_corruptos)
-from tests.conftest import make_folio
-from tests.test_inspecciones import make_rango, hallazgos
+from tests.conftest import make_folio, make_user
+from tests.test_inspecciones import make_rango, hallazgos, make_cadena
 
 JSON = {'Accept': 'application/json'}
 
@@ -233,3 +235,66 @@ def test_cambiar_estado_get_normal_no_es_json(admin_client, app, tipo):
     resp = admin_client.get(f'/folios/{folio.id}/estado')
     assert resp.status_code == 302
     assert f'/folios/{folio.id}' in resp.headers['Location']
+
+
+def _los_seis_chequeos(tipo, centro, operador):
+    """Un hallazgo (mínimo) por cada chequeo, en sus módulos dueños."""
+    # entrega-antes-recepcion (entregas)
+    make_cadena(tipo, centro, operador, numero=9000, rangoId=80,
+                fecha_rec=date(2026, 3, 10), fecha_ent=date(2026, 3, 1))
+    # devolucion-antes-entrega + centro-devolucion-distinto (devoluciones)
+    f = make_cadena(tipo, centro, operador, numero=9001, rangoId=81,
+                    fecha_ent=date(2026, 3, 10), fecha_dev=date(2026, 3, 1))
+    otro = Centro(name='Otro Centro', telefono='555', direccion='Calle 2',
+                  activo=True)
+    db.session.add(otro)
+    db.session.flush()
+    f.devolucion.centroId = otro.id
+    # fechas-futuras: recepcion + entregas + devoluciones (3 hallazgos)
+    make_cadena(tipo, centro, operador, numero=9002, rangoId=82,
+                fecha_rec=date(2027, 1, 1))
+    make_cadena(tipo, centro, operador, numero=9003, rangoId=83,
+                fecha_rec=date(2026, 3, 1), fecha_ent=date(2027, 1, 1))
+    make_cadena(tipo, centro, operador, numero=9004, rangoId=84,
+                fecha_rec=date(2026, 3, 1), fecha_ent=date(2026, 3, 1),
+                fecha_dev=date(2027, 1, 1))
+    # rangos-corruptos (recepcion) + estado-inconsistente (folios)
+    make_rango(tipo, operador, ini=500, fin=400, rangoId=85)
+    make_cadena(tipo, centro, operador, numero=9005, rangoId=86,
+                estado='entregado')
+    db.session.commit()
+
+
+ESPERADOS = {'entrega-antes-recepcion': 1, 'devolucion-antes-entrega': 1,
+             'fechas-futuras': 3, 'centro-devolucion-distinto': 1,
+             'rangos-corruptos': 1, 'estado-inconsistente': 1}
+
+
+def test_detalle_botones_panel_los_seis_chequeos(admin_client, app, tipo,
+                                                 centro, operador):
+    _los_seis_chequeos(tipo, centro, operador)
+    prefijos = set()
+    for clave, n in ESPERADOS.items():
+        html = admin_client.get(f'/inspecciones/{clave}').get_data(as_text=True)
+        assert html.count('data-panel') == n, f'{clave}: {n} esperados'
+        prefijos |= set(re.findall(r'data-url="(/[^"/]+)', html))
+    assert {'/entregas', '/devoluciones', '/recepcion', '/folios'} <= prefijos
+    assert 'modal-corregir' in admin_client.get(
+        '/inspecciones/entrega-antes-recepcion').get_data(as_text=True)
+
+
+def test_detalle_link_plano_sin_permiso_de_edicion(app, client, tipo, centro,
+                                                   operador):
+    make_cadena(tipo, centro, operador, numero=9100, rangoId=90,
+                fecha_rec=date(2026, 3, 10), fecha_ent=date(2026, 3, 1))
+    entrega_id = db.session.query(EntregaFolio).one().id
+    lector = make_user('lector_panel', 'lectura')
+    db.session.add(PermisoUsuario(user_id=lector.id,
+                                  permiso='inspecciones.ver'))
+    db.session.commit()
+    client.post('/auth/login', data={'username': lector.username,
+                                     'password': 'pass12345'})
+    html = client.get('/inspecciones/entrega-antes-recepcion') \
+        .get_data(as_text=True)
+    assert f'<a href="/entregas/{entrega_id}/edit"' in html, 'sin link plano'
+    assert 'data-panel' not in html, 'lector sin edición no debe ver panel'

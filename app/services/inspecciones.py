@@ -28,6 +28,15 @@ URLS_CORREGIR = {
     'folios': 'folios.details',
 }
 
+# Permiso de edición del módulo dueño: sin él, el hallazgo conserva el
+# link plano (detect-and-link original) y el panel de corrección no aparece.
+PERMISOS_EDITAR = {
+    'recepcion': 'recepcion.gestionar',
+    'entregas': 'entregas.gestionar',
+    'devoluciones': 'devoluciones.gestionar',
+    'folios': 'folios.actualizar',
+}
+
 NOMBRES_MODULO = {
     'recepcion': 'Recepción',
     'entregas': 'Entrega',
