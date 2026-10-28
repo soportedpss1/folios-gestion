@@ -22,7 +22,8 @@ módulo dueño. Inspecciones no duplica reglas.
 - Modal genérico en `inspecciones/detalle.html` + JS de panel (fetch, CSRF,
   errores inline).
 - Los 6 chequeos obtienen panel (los 4 módulos dueños cubren todos).
-- Tests TDD nuevos (~14) + ajuste de 2 tests existentes que buscan `<a href>`.
+- Tests TDD nuevos (~17) + ajuste de 2 tests existentes que exigen la URL
+  dueña como substring.
 
 ## Fuera de alcance
 
@@ -73,12 +74,19 @@ Cada ruta: la rama JSON envuelve el flujo existente; la lógica de guardado,
 - `app/templates/folios/_form_estado.html`: el select de estado extraído del
   header de `details.html` (que lo incluye).
 - Un solo sitio para campos, mensajes de validación y `csrf_token`.
+- La alerta de preview de rangos y el bloque `extra_js` de
+  `recepcion/edit.html` **no** entran al partial: se quedan en `edit.html`.
 
 ## UI / Modal
 
 - Cada fila de hallazgo con permiso de edición dueño lleva
   `<button data-panel data-url="<URLS_CORREGIR...>" data-titulo="...">Corregir</button>`;
   sin permiso → `<a href>` actual.
+- `data-url` = la ruta dueña de la corrección. Excepción: para
+  `estado-inconsistente`, `URLS_CORREGIR['folios']` apunta a `folios.details`
+  (donde vive el form de estado condicional) — el **link plano** sigue hacia
+  el detalle, pero el `data-url` del panel va al endpoint JSON
+  `/folios/<id>/estado`. La vista expone `h['url_panel']` para esto.
 - Un único modal Bootstrap (`modal-lg`, `modal-dialog-scrollable` — el form de
   recepción es grande) en `detalle.html`.
 - JS del panel (`app/static/js/inspecciones_panel.js`, cargado por
@@ -125,29 +133,36 @@ red/respuesta: `No se pudo guardar. Intente de nuevo.`
 
 ## Testing (TDD)
 
-Archivo nuevo `tests/test_inspecciones_panel.py` (~14 tests):
+Archivo nuevo `tests/test_inspecciones_panel.py` (~17 tests):
 
 - **entregas**: GET-json devuelve `campos_html` con `name="fechaEntrega"`;
   POST-json válido → `{ok:true}` + fecha cambiada + `audit_log` UPDATE;
-  POST-json con fecha futura → 400 `errores.fechaEntrega` + sin cambio.
-- **devoluciones**: mismo triple (campo `fechaDevolucion`; error de centro).
+  POST-json con fecha futura → 400 `errores.fechaEntrega` + sin cambio;
+  POST-json con regla de negocio (folio devuelto + centro cambiado) → 400
+  `{error}` sin clave `errores`; POST **sin** header → redirect intacto.
+- **devoluciones**: mismo triple (campo `fechaDevolucion`; error de fecha
+  futura). Su único `error` de negocio es `IntegrityError` (indirecto: la
+  forma `{error}` ya la cubren entregas/cambiar_estado).
 - **recepcion**: GET-json con `name="folioInicial"`; POST-json corrige un
   solape → `{ok:true}` y el chequeo `rangos-corruptos` queda sin hallazgo;
   POST-json con solape nuevo → 400 con `errores` no vacío + sin cambio.
 - **cambiar_estado**: GET-json devuelve select; POST-json válido → estado +
-  audit; POST-json `'perdido'` → 400 `{error}` + sin cambio.
+  audit; POST-json `'perdido'` → 400 `{error}` + sin cambio; GET **sin**
+  header → redirect al detalle.
 - **detalle.html**: los 6 hallazgos renderizan `data-panel` + `data-url`
   correcto; usuario con `inspecciones.ver` pero sin permiso de edición dueño
   → `<a href>` (sin `data-panel`).
 - **Ajuste de 2 tests existentes** (`test_detalle_muestra_hallazgo_y_link_corregir`,
-  `test_fechas_futuras_link_por_modulo`): pasan de buscar `<a href>` a
-  `data-url` — regla de la spec: el link plano queda solo sin permiso de
-  panel; los tests corren como admin (con permiso) y ven el botón.
+  `test_fechas_futuras_link_por_modulo`): hoy exigen la URL dueña como
+  substring suelta; se endurecen a `data-url="<url exacta>"` — la spec
+  obliga a que el control de corrección (admin tiene permiso) sea el botón
+  con `data-url`.
 - Regresión: suites existentes de entregas/devoluciones/recepcion/folios
   intactas (la rama no-JSON no cambió) — correr la suite completa.
 
 ## Compatibilidad
 
 - Sin cambios de modelo, migración, config ni permisos.
-- `URLS_CORREGIR` pasa de alimentar `<a href>` a alimentar `data-url`.
+- `URLS_CORREGIR` pasa de alimentar `<a href>` a alimentar `data-url`
+  (con `h['url_panel']` para el endpoint de estado, ver UI/Modal).
 - Las páginas de edición dueñas quedan visualmente idénticas (mismo partial).
