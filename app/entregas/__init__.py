@@ -17,7 +17,7 @@ from app.services import movimientos as mov
 from app.services.audit import log_audit
 from app.services.mensajes import REFRESQUE_INTENTE
 from app.services.queries import get_or_404, usuario_activo
-from app.utils import plural, parsear_fecha
+from app.utils import plural, parsear_fecha, quiere_json
 from app.decorators import permiso_requerido
 
 
@@ -294,6 +294,9 @@ def edit(id):
         form.folio_id.data = entrega.folio_id
         form.fechaEntrega.data = entrega.fechaEntrega
         form.centroId.data = entrega.centroId
+        if quiere_json():
+            return jsonify(ok=True, campos_html=render_template(
+                'entregas/_form.html', form=form, entrega=entrega))
 
     if form.validate_on_submit():
         devolucion = entrega.folio.devolucion
@@ -301,10 +304,17 @@ def edit(id):
         # Reportes y Devoluciones divergirían para siempre sobre qué centro
         # tuvo el folio.
         if devolucion is not None and form.centroId.data != devolucion.centroId:
+            if quiere_json():
+                return jsonify(ok=False, error='El folio ya fue devuelto: '
+                              'no puede cambiarse el centro de esta entrega.'
+                              ), 400
             flash('El folio ya fue devuelto: no puede cambiarse el centro '
                   'de esta entrega.', 'danger')
             return render_template('entregas/edit.html', form=form, entrega=entrega)
         if devolucion is not None and form.fechaEntrega.data > devolucion.fechaDevolucion:
+            if quiere_json():
+                return jsonify(ok=False, error='La fecha de entrega no puede '
+                              'ser posterior a la devolución registrada.'), 400
             flash('La fecha de entrega no puede ser posterior a la '
                   'devolución registrada.', 'danger')
             return render_template('entregas/edit.html', form=form, entrega=entrega)
@@ -316,11 +326,20 @@ def edit(id):
             db.session.commit()
         except IntegrityError:
             db.session.rollback()
+            if quiere_json():
+                return jsonify(ok=False, error='Conflicto de concurrencia al '
+                              'actualizar la entrega. Refresque la lista e '
+                              'intente de nuevo.'), 400
             flash('Conflicto de concurrencia al actualizar la entrega. '
                   'Refresque la lista e intente de nuevo.', 'danger')
             return render_template('entregas/edit.html', form=form, entrega=entrega)
 
+        if quiere_json():
+            return jsonify(ok=True)
         flash('Entrega actualizada exitosamente.', 'success')
         return redirect(url_for('entregas.index'))
 
+    if quiere_json():
+        return jsonify(ok=False, errores={k: v[0]
+                                         for k, v in form.errors.items()}), 400
     return render_template('entregas/edit.html', form=form, entrega=entrega)

@@ -1,6 +1,18 @@
-"""Utilidades generales sin dependencias de Flask."""
+"""Utilidades generales (incluye detección de modo JSON de petición)."""
 
 from datetime import datetime, timezone
+
+from flask import request
+
+
+def quiere_json():
+    """True si el cliente pide JSON explícitamente (Accept: application/json).
+
+    Detección única del modo JSON de las rutas dueñas (paneles de
+    inspecciones). Igualdad estricta: `*/*` → '*/*', sin header → None —
+    la navegación normal jamás entra en la rama JSON.
+    """
+    return request.accept_mimetypes.best == 'application/json'
 
 
 def utcnow():
