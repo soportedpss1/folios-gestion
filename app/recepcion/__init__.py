@@ -3,7 +3,7 @@ from datetime import date, datetime
 from io import BytesIO
 
 from flask import (Blueprint, render_template, redirect, url_for, flash, request,
-                   make_response)
+                   make_response, jsonify)
 from flask_login import login_required, current_user
 from markupsafe import escape
 from sqlalchemy.exc import IntegrityError
@@ -28,7 +28,7 @@ from app.services.mensajes import msg_solape, INTENTE_DE_NUEVO
 from app.services.pdf import encabezado_pdf
 from app.services.queries import (get_or_404, resolver_usuario_nombre,
                                   usuario_activo)
-from app.utils import plural
+from app.utils import plural, quiere_json
 from app.decorators import permiso_requerido
 
 recepcion_bp = Blueprint('recepcion', __name__, url_prefix='/recepcion')
@@ -354,6 +354,10 @@ def edit(id):
         form.tipoCert.data = recepcion.tipoCert_id
         form.usuario.data = recepcion.userId
 
+    if request.method == 'GET' and quiere_json():
+        return jsonify(ok=True, campos_html=render_template(
+            'recepcion/_form.html', form=form, recepcion=recepcion))
+
     if form.validate_on_submit():
         anio, tipo_id = form.anioCert.data, form.tipoCert.data
         ini, fin = form.folioInicial.data, form.folioFinal.data
@@ -365,6 +369,9 @@ def edit(id):
                      if cambia_nivel or not (ini <= f.folio <= fin)]
         usados = _folios_usados(afectados)
         if usados:
+            if quiere_json():
+                return jsonify(ok=False,
+                               error=_mensaje_usados('editar', usados)), 400
             flash(_mensaje_usados('editar', usados), 'danger')
             return redirect(url_for('recepcion.index'))
 
@@ -399,13 +406,21 @@ def edit(id):
             db.session.commit()
         except IntegrityError:
             db.session.rollback()
+            if quiere_json():
+                return jsonify(ok=False, error='Conflicto de integridad al '
+                              'actualizar la recepción. ' + INTENTE_DE_NUEVO), 400
             flash('Conflicto de integridad al actualizar la recepción. '
                   + INTENTE_DE_NUEVO, 'danger')
             return redirect(url_for('recepcion.index'))
 
+        if quiere_json():
+            return jsonify(ok=True)
         flash('Recepción actualizada.', 'success')
         return redirect(url_for('recepcion.index'))
 
+    if quiere_json():
+        return jsonify(ok=False, errores={k: v[0]
+                                         for k, v in form.errors.items()}), 400
     return render_template('recepcion/edit.html', form=form, recepcion=recepcion)
 
 

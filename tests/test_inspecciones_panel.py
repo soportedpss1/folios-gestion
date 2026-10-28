@@ -7,7 +7,11 @@ from app.models.audit_log import AuditLog
 from app.models.centro import Centro
 from app.models.devolucion_folio import DevolucionFolio
 from app.models.entrega_folio import EntregaFolio
+from app.models.recepcion_folio import RecepcionFolio
+from app.services.inspecciones import (rangos_corruptos,
+                                       formatear_rangos_corruptos)
 from tests.conftest import make_folio
+from tests.test_inspecciones import make_rango, hallazgos
 
 JSON = {'Accept': 'application/json'}
 
@@ -142,3 +146,42 @@ def test_devoluciones_edit_json_post_fecha_futura(admin_client, app, tipo,
     assert resp.status_code == 400
     assert 'posterior a hoy' in resp.get_json()['errores']['fechaDevolucion']
     assert db.session.get(DevolucionFolio, dev.id).fechaDevolucion == date(2026, 3, 10)
+
+
+def test_recepcion_edit_json_get_campos(admin_client, app, tipo, operador):
+    r = make_rango(tipo, operador, ini=1, fin=100, rangoId=60)
+    data = admin_client.get(f'/recepcion/{r.id}/edit',
+                            headers=JSON).get_json()
+    assert data['ok'] is True
+    assert 'name="folioInicial"' in data['campos_html']
+    assert 'csrf_token' not in data['campos_html']
+
+
+def test_recepcion_edit_json_corrige_solape(admin_client, app, tipo, operador):
+    a = make_rango(tipo, operador, ini=1, fin=100, rangoId=61)
+    b = make_rango(tipo, operador, ini=50, fin=150, rangoId=62)  # solapa
+    # Precondición: el solape es hallazgo del chequeo rangos-corruptos.
+    assert hallazgos(rangos_corruptos(), formatear_rangos_corruptos)
+    resp = admin_client.post(
+        f'/recepcion/{b.id}/edit', headers=JSON,
+        data={'fecha': '01/03/2026', 'anioCert': 2026, 'tipoCert': tipo.id,
+              'folioInicial': 101, 'folioFinal': 150, 'usuario': operador.id})
+    assert resp.get_json() == {'ok': True}
+    assert hallazgos(rangos_corruptos(), formatear_rangos_corruptos) == []
+    assert AuditLog.query.filter_by(accion='UPDATE',
+                                    tabla='recepcion_folios',
+                                    registro_id=b.id).count() == 1
+
+
+def test_recepcion_edit_json_post_crea_solape(admin_client, app, tipo,
+                                              operador):
+    a = make_rango(tipo, operador, ini=1, fin=100, rangoId=63)
+    b = make_rango(tipo, operador, ini=101, fin=200, rangoId=64)
+    resp = admin_client.post(
+        f'/recepcion/{b.id}/edit', headers=JSON,
+        data={'fecha': '01/03/2026', 'anioCert': 2026, 'tipoCert': tipo.id,
+              'folioInicial': 50, 'folioFinal': 200, 'usuario': operador.id})
+    assert resp.status_code == 400
+    data = resp.get_json()
+    assert data['ok'] is False and data.get('errores')
+    assert db.session.get(RecepcionFolio, b.id).folioInicial == 101
