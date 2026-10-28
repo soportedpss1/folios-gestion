@@ -18,7 +18,7 @@ from app.services.escaneos import validar_carpeta
 from app.services.movimientos import choices_centros
 from app.services.permisos import puede
 from app.services.queries import get_or_404
-from app.utils import plural
+from app.utils import plural, quiere_json
 
 folios_bp = Blueprint('folios', __name__, url_prefix='/folios')
 
@@ -306,7 +306,7 @@ def recuperar(id):
 ESTADOS_CORREGIBLES = ('disponible', 'entregado', 'devuelto')
 
 
-@folios_bp.route('/<int:id>/estado', methods=['POST'])
+@folios_bp.route('/<int:id>/estado', methods=['GET', 'POST'])
 @permiso_requerido('folios.actualizar', hacia='blueprint')
 def cambiar_estado(id):
     """Corrige a mano el estado del folio (auditado; 'perdido' no entra:
@@ -314,15 +314,29 @@ def cambiar_estado(id):
     su marcaje y recuperación son un flujo propio con reglas derivadas del
     registro de entrega)."""
     folio = get_or_404(Folio, id)
+    if request.method == 'GET':
+        # Panel de inspecciones (JSON): campos del form. Sin JSON no hay
+        # form que mostrar en GET → de vuelta al detalle.
+        if quiere_json():
+            return jsonify(ok=True, campos_html=render_template(
+                'folios/_form_estado.html', folio=folio))
+        return redirect(url_for('folios.details', id=folio.id))
     nuevo = request.form.get('estado', '').strip()
     if nuevo not in ESTADOS_CORREGIBLES:
+        if quiere_json():
+            return jsonify(ok=False, error='Estado inválido.'), 400
         flash('Estado inválido.', 'danger')
         return redirect(url_for('folios.details', id=folio.id))
     if nuevo == folio.estado:
+        if quiere_json():
+            return jsonify(ok=False,
+                           error='Ese ya es el estado del folio.'), 400
         flash('Ese ya es el estado del folio.', 'info')
         return redirect(url_for('folios.details', id=folio.id))
     _cambiar_estado(folio, nuevo)
     db.session.commit()
+    if quiere_json():
+        return jsonify(ok=True)
     flash('Estado actualizado exitosamente.', 'success')
     return redirect(url_for('folios.details', id=folio.id))
 

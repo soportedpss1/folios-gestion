@@ -1,0 +1,6 @@
+<select name="estado" class="form-select form-select-sm w-auto"
+        aria-label="Estado del folio">
+    <option value="disponible" {% if folio.estado == 'disponible' %}selected{% endif %}>Disponible</option>
+    <option value="entregado" {% if folio.estado == 'entregado' %}selected{% endif %}>Entregado</option>
+    <option value="devuelto" {% if folio.estado == 'devuelto' %}selected{% endif %}>Devuelto</option>
+</select>

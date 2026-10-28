@@ -41,12 +41,7 @@
                   data-text="Se guardará con registro de auditoría." data-icon="question"
                   class="d-flex gap-1 align-items-center">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <select name="estado" class="form-select form-select-sm w-auto"
-                        aria-label="Estado del folio">
-                    <option value="disponible" {% if folio.estado == 'disponible' %}selected{% endif %}>Disponible</option>
-                    <option value="entregado" {% if folio.estado == 'entregado' %}selected{% endif %}>Entregado</option>
-                    <option value="devuelto" {% if folio.estado == 'devuelto' %}selected{% endif %}>Devuelto</option>
-                </select>
+                {% include 'folios/_form_estado.html' %}
                 <button type="submit" class="btn btn-sm btn-outline-primary">Guardar estado</button>
             </form>
             {% endif %}

@@ -7,6 +7,7 @@ from app.models.audit_log import AuditLog
 from app.models.centro import Centro
 from app.models.devolucion_folio import DevolucionFolio
 from app.models.entrega_folio import EntregaFolio
+from app.models.folio import Folio
 from app.models.recepcion_folio import RecepcionFolio
 from app.services.inspecciones import (rangos_corruptos,
                                        formatear_rangos_corruptos)
@@ -185,3 +186,50 @@ def test_recepcion_edit_json_post_crea_solape(admin_client, app, tipo,
     data = resp.get_json()
     assert data['ok'] is False and data.get('errores')
     assert db.session.get(RecepcionFolio, b.id).folioInicial == 101
+
+
+def _folio_incoherente(tipo):
+    folio = make_folio(tipo, anio=2026, numero=8200, rangoId=70,
+                       estado='entregado')
+    db.session.commit()
+    return folio
+
+
+def test_cambiar_estado_json_get_campos(admin_client, app, tipo):
+    folio = _folio_incoherente(tipo)
+    data = admin_client.get(f'/folios/{folio.id}/estado',
+                            headers=JSON).get_json()
+    assert data['ok'] is True
+    assert 'name="estado"' in data['campos_html']
+    assert 'csrf_token' not in data['campos_html']
+    assert 'perdido' not in data['campos_html'], 'perdido es flujo propio'
+
+
+def test_cambiar_estado_json_post_ok(admin_client, app, tipo):
+    folio = _folio_incoherente(tipo)
+    resp = admin_client.post(f'/folios/{folio.id}/estado', headers=JSON,
+                             data={'estado': 'disponible'})
+    assert resp.get_json() == {'ok': True}
+    assert db.session.get(Folio, folio.id).estado == 'disponible'
+    assert AuditLog.query.filter_by(accion='UPDATE', tabla='folios',
+                                    registro_id=folio.id).count() == 1
+
+
+def test_cambiar_estado_json_post_invalido(admin_client, app, tipo):
+    folio = _folio_incoherente(tipo)
+    resp = admin_client.post(f'/folios/{folio.id}/estado', headers=JSON,
+                             data={'estado': 'perdido'})
+    assert resp.status_code == 400
+    data = resp.get_json()
+    assert data['ok'] is False and 'inválido' in data['error']
+    assert db.session.get(Folio, folio.id).estado == 'entregado'
+    assert AuditLog.query.filter_by(tabla='folios',
+                                    registro_id=folio.id).count() == 0
+
+
+def test_cambiar_estado_get_normal_no_es_json(admin_client, app, tipo):
+    # GET sin header JSON: no filtra el form, redirige al detalle.
+    folio = _folio_incoherente(tipo)
+    resp = admin_client.get(f'/folios/{folio.id}/estado')
+    assert resp.status_code == 302
+    assert f'/folios/{folio.id}' in resp.headers['Location']
