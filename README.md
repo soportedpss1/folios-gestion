@@ -46,7 +46,7 @@ docker compose -f docker-compose.deploy.yml exec app python init_db.py
 curl -fs http://localhost:8089/health        # {"status": "ok"}
 ```
 
-Imagen: `soportedpss1/folios-gestion:<tag>` (tags: `1.6.0`, `latest`).
+Imagen: `soportedpss1/folios-gestion:<tag>` (tags: `1.7.0`, `latest`).
 La **única fuente** de la versión es el archivo [`VERSION`](VERSION) de la raíz:
 viaja en la imagen (`COPY . .`), se lee al arrancar (`app/version.py`) y se
 muestra en el footer del sidebar. El tag de la imagen debe coincidir con él.
