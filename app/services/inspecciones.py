@@ -81,6 +81,7 @@ def devolucion_antes_entrega():
         db.session.query(
             DevolucionFolio.id.label('registro_id'),
             DevolucionFolio.fechaDevolucion,
+            EntregaFolio.id.label('entrega_id'),
             EntregaFolio.fechaEntrega,
             Folio.folio,
         )
@@ -98,6 +99,11 @@ def formatear_devolucion_antes_entrega(row):
                     f'entrega {dmy(row.fechaEntrega)}'),
         'modulo': 'devoluciones',
         'registro_id': row.registro_id,
+        # La fecha errónea puede ser la de la entrega: la fila lleva control
+        # propio por cada fecha (título por botón para el modal).
+        'entrega_id': row.entrega_id,
+        'titulo_dev': f'Corregir devolución · Folio {row.folio}',
+        'titulo_ent': f'Corregir entrega · Folio {row.folio}',
     }
 
 

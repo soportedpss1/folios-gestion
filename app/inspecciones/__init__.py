@@ -43,6 +43,10 @@ def detalle(clave):
         h['url_panel'] = (
             url_for('folios.cambiar_estado', id=h['registro_id'])
             if h['modulo'] == 'folios' else h['url'])
+        # Chequeos con registro cruzado (devolucion-antes-entrega): control
+        # propio para la entrega, gateado por su permiso en el template.
+        if h.get('entrega_id'):
+            h['url_entrega'] = url_for('entregas.edit', id=h['entrega_id'])
         hallazgos.append(h)
     return render_template('inspecciones/detalle.html', clave=clave,
                            chequeo=chequeo, hallazgos=hallazgos,

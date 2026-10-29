@@ -50,9 +50,9 @@
             (el) => flatpickr(el, { locale: 'es', dateFormat: 'd/m/Y' }));
     }
 
-    function abrir(url) {
+    function abrir(url, tituloBtn) {
         limpiarErrores();
-        titulo.textContent = 'Corregir';
+        titulo.textContent = tituloBtn || 'Corregir';
         fetch(url, { headers: JSON_HEADERS })
             .then((resp) => {
                 if (!resp.ok || !isJson(resp)) throw new Error('get');
@@ -95,7 +95,8 @@
     }
 
     document.querySelectorAll('[data-panel]').forEach((btn) => {
-        btn.addEventListener('click', () => abrir(btn.dataset.url));
+        btn.addEventListener('click', () => abrir(btn.dataset.url,
+                                                  btn.dataset.titulo));
     });
 
     form.addEventListener('submit', (ev) => {

@@ -37,16 +37,34 @@
                 <td>{{ h['titulo'] }}</td>
                 <td>{{ h['detalle'] }}</td>
                 <td class="text-end">
+                    {# devolucion-antes-entrega: control por cada fecha —
+                       la culpable puede ser la entrega o la devolución. #}
+                    {% set doble = h.get('entrega_id') %}
+                    {% set etiqueta = 'Corregir devolución' if doble else 'Corregir' %}
+                    {% set titulo = h.get('titulo_dev') if doble else h['titulo'] %}
                     {% if puede(PERMISOS_EDITAR[h['modulo']]) %}
                     <button type="button" class="btn btn-sm btn-outline-primary"
                             data-panel data-url="{{ h['url_panel'] }}"
-                            data-titulo="{{ h['titulo'] }}">
-                        <i class="fas fa-pen me-1" aria-hidden="true"></i>Corregir
+                            data-titulo="{{ titulo }}">
+                        <i class="fas fa-pen me-1" aria-hidden="true"></i>{{ etiqueta }}
                     </button>
                     {% else %}
                     <a href="{{ h['url'] }}" class="btn btn-sm btn-outline-primary">
-                        <i class="fas fa-pen me-1" aria-hidden="true"></i>Corregir
+                        <i class="fas fa-pen me-1" aria-hidden="true"></i>{{ etiqueta }}
                     </a>
+                    {% endif %}
+                    {% if doble %}
+                    {% if puede(PERMISOS_EDITAR['entregas']) %}
+                    <button type="button" class="btn btn-sm btn-outline-primary"
+                            data-panel data-url="{{ h['url_entrega'] }}"
+                            data-titulo="{{ h['titulo_ent'] }}">
+                        <i class="fas fa-pen me-1" aria-hidden="true"></i>Corregir entrega
+                    </button>
+                    {% else %}
+                    <a href="{{ h['url_entrega'] }}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-pen me-1" aria-hidden="true"></i>Corregir entrega
+                    </a>
+                    {% endif %}
                     {% endif %}
                 </td>
             </tr>

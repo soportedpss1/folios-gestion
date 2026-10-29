@@ -77,6 +77,7 @@ def test_devolucion_antes_entrega_detecta(app, tipo, centro, operador):
     res = hallazgos(devolucion_antes_entrega(), formatear_devolucion_antes_entrega)
     assert len(res) == 1
     assert res[0]['modulo'] == 'devoluciones'
+    assert res[0]['entrega_id']  # id de la EntregaFolio cruzada
     assert f'Folio {folio.folio}' in res[0]['titulo']
     assert '01/03/2026' in res[0]['detalle'] and '10/03/2026' in res[0]['detalle']
 

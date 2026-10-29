@@ -265,7 +265,8 @@ def _los_seis_chequeos(tipo, centro, operador):
     db.session.commit()
 
 
-ESPERADOS = {'entrega-antes-recepcion': 1, 'devolucion-antes-entrega': 1,
+# devolucion-antes-entrega: 2 paneles (devolución + entrega)
+ESPERADOS = {'entrega-antes-recepcion': 1, 'devolucion-antes-entrega': 2,
              'fechas-futuras': 3, 'centro-devolucion-distinto': 1,
              'rangos-corruptos': 1, 'estado-inconsistente': 1}
 
@@ -298,3 +299,40 @@ def test_detalle_link_plano_sin_permiso_de_edicion(app, client, tipo, centro,
         .get_data(as_text=True)
     assert f'<a href="/entregas/{entrega_id}/edit"' in html, 'sin link plano'
     assert 'data-panel' not in html, 'lector sin edición no debe ver panel'
+
+
+def test_detalle_devolucion_antes_entrega_doble_control(admin_client, app,
+                                                        tipo, centro,
+                                                        operador):
+    folio = make_cadena(tipo, centro, operador, numero=9200, rangoId=91,
+                        fecha_ent=date(2026, 3, 10), fecha_dev=date(2026, 3, 1))
+    entrega_id = db.session.query(EntregaFolio).one().id
+    html = admin_client.get('/inspecciones/devolucion-antes-entrega') \
+        .get_data(as_text=True)
+    assert f'data-url="/entregas/{entrega_id}/edit"' in html, 'sin panel de entrega'
+    assert 'Corregir devolución' in html and 'Corregir entrega' in html
+    titulos = re.findall(r'data-titulo="([^"]+)"', html)
+    assert len(titulos) == 2 and titulos[0] != titulos[1], titulos
+    assert all(f'Folio {folio.folio}' in t for t in titulos)
+
+
+def test_detalle_doble_control_permiso_parcial(app, client, tipo, centro,
+                                               operador):
+    # devoluciones.gestionar otorgado, entregas.gestionar NO: 1 panel + link plano.
+    make_cadena(tipo, centro, operador, numero=9300, rangoId=92,
+                fecha_ent=date(2026, 3, 10), fecha_dev=date(2026, 3, 1))
+    entrega_id = db.session.query(EntregaFolio).one().id
+    lector = make_user('lector_doble', 'lectura')
+    db.session.add(PermisoUsuario(user_id=lector.id,
+                                  permiso='inspecciones.ver'))
+    db.session.add(PermisoUsuario(user_id=lector.id,
+                                  permiso='devoluciones.gestionar'))
+    db.session.commit()
+    client.post('/auth/login', data={'username': lector.username,
+                                     'password': 'pass12345'})
+    html = client.get('/inspecciones/devolucion-antes-entrega') \
+        .get_data(as_text=True)
+    assert html.count('data-panel') == 1, 'solo el panel de devolución'
+    assert f'<a href="/entregas/{entrega_id}/edit"' in html, \
+        'entrega sin permiso debe quedar como link plano'
+    assert 'Corregir entrega' in html
