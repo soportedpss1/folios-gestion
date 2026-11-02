@@ -78,7 +78,8 @@
                         <th>Usuario</th>
                         <th>Acción</th>
                         <th>Tabla</th>
-                        <th>ID Registro</th>
+                        <th>Registro</th>
+                        <th>Detalle</th>
                         <th>IP</th>
                     </tr>
                 </thead>
@@ -99,12 +100,29 @@
                             {% endif %}
                         </td>
                         <td><code>{{ log.tabla }}</code></td>
-                        <td>{{ log.registro_id }}</td>
+                        <td>
+                            {% set desc = descripciones.get(log.id) %}
+                            {% if desc and desc.etiqueta %}
+                                <div>{{ desc.etiqueta }}</div>
+                            {% endif %}
+                            {% if log.registro_id %}
+                                <small class="text-muted">#{{ log.registro_id }}</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if desc and desc.campos %}
+                                {% for clave, valor in desc.campos %}
+                                    <div class="small"><code>{{ clave }}</code>: {{ valor }}</div>
+                                {% endfor %}
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
                         <td><small class="text-muted">{{ log.ip_address }}</small></td>
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="6" class="text-center text-muted py-4">
+                        <td colspan="7" class="text-center text-muted py-4">
                             <i class="fas fa-history fa-2x mb-2 d-block"></i>
                             No hay registros de auditoría
                         </td>

@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, request
 from flask_login import login_required
 from app.models.audit_log import AuditLog
 from app.models.usuario import Usuario
+from app.services.audit import describir_logs
 from app.decorators import permiso_requerido
 
 auditoria_bp = Blueprint('auditoria', __name__, url_prefix='/auditoria')
@@ -31,6 +32,7 @@ def index():
 
     return render_template('auditoria/index.html',
         logs=pagination.items,
+        descripciones=describir_logs(pagination.items),
         pagination=pagination,
         usuarios=usuarios,
         current_user_id=user_id,
