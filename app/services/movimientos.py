@@ -4,6 +4,10 @@ Ambos blueprints hacen lo mismo con estados espejo: entregar pasa
 `disponible -> entregado` y devolver `entregado -> devuelto`. Centralizar aquí
 choices y consultas de API evita que un cambio llegue a uno y no al otro.
 Ningún edit cambia de folio: los estados solo los tocan la creación.
+
+Excepción: devolver en blanco (`liberar_en_blanco`) borra la entrega y
+devuelve el folio a `disponible` sin registro de devolución, para que pueda
+reasignarse — el historial queda en audit_logs.
 """
 
 from datetime import date
@@ -258,6 +262,42 @@ def folios_devolubles(folios_centros):
     ).all()
     pares = {(f, c) for f, c in filas}
     return [fid for fid, cid in folios_centros.items() if (fid, cid) in pares]
+
+
+def liberar_en_blanco(*, folio_ids, actor, log_audit):
+    """Devuelve al pool folios entregados que volvieron en blanco (sin llenar).
+
+    Borra la entrega —y una devolución huérfana, dejada por una corrección
+    manual de estado— y deja el folio `disponible`. Sin registro nuevo no
+    choca uq_entrega_folios_folio_id y el folio puede reasignarse a otro
+    centro; el historial queda en audit_logs (DELETE de cada registro +
+    UPDATE del estado). Devuelve (liberados, omitidos): un folio se omite si
+    ya no estaba entregado (misma semántica que crear_movimiento).
+    """
+    folio_ids = list(dict.fromkeys(folio_ids))
+    liberados = 0
+    for folio_id in folio_ids:
+        folio = db.session.get(Folio, folio_id)
+        if folio is None or folio.estado != 'entregado':
+            continue
+        entrega = folio.entrega
+        if entrega is not None:
+            datos = entrega.to_dict()
+            db.session.delete(entrega)
+            log_audit(actor.id, 'DELETE', 'entrega_folios', entrega.id,
+                      datos, None)
+        devolucion = folio.devolucion
+        if devolucion is not None:
+            datos = devolucion.to_dict()
+            db.session.delete(devolucion)
+            log_audit(actor.id, 'DELETE', 'devolucion_folios', devolucion.id,
+                      datos, None)
+        old = {'estado': folio.estado}
+        folio.estado = 'disponible'
+        log_audit(actor.id, 'UPDATE', 'folios', folio.id, old,
+                  {'estado': 'disponible'})
+        liberados += 1
+    return liberados, len(folio_ids) - liberados
 
 
 def crear_movimiento(*, modelo, fecha_field, folio_ids, fecha, centro_id, user,

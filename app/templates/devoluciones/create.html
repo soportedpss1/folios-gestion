@@ -81,6 +81,18 @@
                                 <div class="text-danger small mt-1" role="alert">{{ error }}</div>
                             {% endfor %}
                         </div>
+
+                        <div class="col-md-12">
+                            <div class="form-check">
+                                {{ form.en_blanco(class="form-check-input", id="en-blanco") }}
+                                {{ form.en_blanco.label(class="form-check-label fw-semibold") }}
+                            </div>
+                            <small class="form-text text-muted">
+                                Folios devueltos en blanco: no quedan como devolución — se libera
+                                la entrega y el folio vuelve a estar disponible para asignar a otro
+                                centro de salud. El historial queda en auditoría.
+                            </small>
+                        </div>
                     </div>
 
                     <hr>

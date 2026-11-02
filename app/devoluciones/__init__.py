@@ -89,19 +89,26 @@ def create():
             return redirect(url_for('devoluciones.create'))
 
         try:
-            count, omitidos = mov.crear_movimiento(
-                modelo=DevolucionFolio,
-                fecha_field='fechaDevolucion',
-                folio_ids=foliosSeleccionados,
-                fecha=form.fechaDevolucion.data,
-                centro_id=form.centroId.data,
-                user=current_user,
-                estado_origen='entregado',
-                estado_destino='devuelto',
-                excluir_nulos=False,
-                tabla_audit='devolucion_folios',
-                log_audit=log_audit,
-            )
+            if form.en_blanco.data:
+                count, omitidos = mov.liberar_en_blanco(
+                    folio_ids=foliosSeleccionados,
+                    actor=current_user,
+                    log_audit=log_audit,
+                )
+            else:
+                count, omitidos = mov.crear_movimiento(
+                    modelo=DevolucionFolio,
+                    fecha_field='fechaDevolucion',
+                    folio_ids=foliosSeleccionados,
+                    fecha=form.fechaDevolucion.data,
+                    centro_id=form.centroId.data,
+                    user=current_user,
+                    estado_origen='entregado',
+                    estado_destino='devuelto',
+                    excluir_nulos=False,
+                    tabla_audit='devolucion_folios',
+                    log_audit=log_audit,
+                )
             db.session.commit()
         except IntegrityError:
             db.session.rollback()
@@ -109,7 +116,23 @@ def create():
                   'operación. ' + REFRESQUE_INTENTE, 'danger')
             return redirect(url_for('devoluciones.create'))
 
-        if omitidos:
+        if form.en_blanco.data:
+            if omitidos:
+                flash(
+                    f'{count} {plural(count, "folio")} {plural(count, "liberado")} '
+                    f'y disponible{"s" if count != 1 else ""} para reasignar; '
+                    f'{omitidos} {plural(omitidos, "folio")} {plural(omitidos, "omitido")} '
+                    'porque ya no estaban entregados. Refresque la lista.',
+                    'warning',
+                )
+            else:
+                flash(
+                    f'{count} {plural(count, "folio")} {plural(count, "liberado")} '
+                    f'y disponible{"s" if count != 1 else ""} para reasignar a '
+                    'otro centro de salud.',
+                    'success',
+                )
+        elif omitidos:
             flash(
                 f'{count} {plural(count, "devolución", "devoluciones")} {plural(count, "registrada")}; '
                 f'{omitidos} {plural(omitidos, "folio")} {plural(omitidos, "omitido")} '

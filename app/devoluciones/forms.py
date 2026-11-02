@@ -1,6 +1,6 @@
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileAllowed, FileField, FileRequired
-from wtforms import SelectMultipleField, SelectField, SubmitField
+from wtforms import BooleanField, SelectMultipleField, SelectField, SubmitField
 from wtforms.validators import DataRequired
 from datetime import date
 
@@ -18,6 +18,9 @@ class DevolucionForm(FlaskForm):
     ], default=date.today)
     centroId = SelectField('Centro de Salud', coerce=coerce_id_opcional,
                            validators=[DataRequired(message='Seleccione el centro de salud.')])
+    # En modo en_blanco la fecha se ignora (no queda registro de devolución);
+    # se mantiene DataRequired para no alterar la validación del resto del form.
+    en_blanco = BooleanField('Folios en blanco (sin llenar): liberar para reasignar')
     submit = SubmitField('Registrar Devolución')
 
 
