@@ -341,12 +341,14 @@ def export_lista_excel():
     from openpyxl.styles import Font, Alignment, PatternFill
 
     centros = Centro.query.order_by(Centro.name).all()
+    ultima_entrega, ultima_devolucion = _ultimos_por_centro()
 
     wb = Workbook()
     ws = wb.active
     ws.title = 'Centros'
 
-    headers = ['#', 'Nombre', 'Teléfono', 'Dirección', 'Estado']
+    headers = ['#', 'Nombre', 'Teléfono', 'Dirección', 'Última entrega',
+               'Última devolución', 'Estado']
     header_font = Font(bold=True, color='FFFFFF')
     header_fill = PatternFill(start_color='0D6EFD', end_color='0D6EFD', fill_type='solid')
     header_align = Alignment(horizontal='center')
@@ -357,11 +359,15 @@ def export_lista_excel():
         cell.alignment = header_align
 
     for row, c in enumerate(centros, 2):
+        e = ultima_entrega.get(c.id)
+        d = ultima_devolucion.get(c.id)
         ws.cell(row=row, column=1, value=c.id)
         ws.cell(row=row, column=2, value=c.name)
         ws.cell(row=row, column=3, value=c.telefono or '')
         ws.cell(row=row, column=4, value=c.direccion or '')
-        ws.cell(row=row, column=5, value='Activo' if c.activo else 'Inactivo')
+        ws.cell(row=row, column=5, value=e.strftime('%d/%m/%Y') if e else '')
+        ws.cell(row=row, column=6, value=d.strftime('%d/%m/%Y') if d else '')
+        ws.cell(row=row, column=7, value='Activo' if c.activo else 'Inactivo')
 
     for col in ws.columns:
         max_length = max(len(str(cell.value or '')) for cell in col)

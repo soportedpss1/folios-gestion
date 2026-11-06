@@ -1,6 +1,9 @@
 """Listado de centros: última entrega y última devolución por centro."""
 
 from datetime import date
+from io import BytesIO
+
+from openpyxl import load_workbook
 
 from app.extensions import db
 from app.models.centro import Centro
@@ -40,3 +43,28 @@ def test_index_muestra_ultima_entrega_y_devolucion(auth_client, app, tipo,
     assert '10/03/2026' not in body, 'no debe mostrar una entrega antigua como última'
     assert '15/06/2026' in body, 'fecha de última devolución ausente'
     assert 'Centro Sin Movimientos' in body, 'el centro sin datos debe seguir listado'
+
+
+def test_excel_lista_muestra_ultimas_fechas(auth_client, app, tipo, centro,
+                                            operador):
+    _seed(centro, tipo, operador)
+    resp = auth_client.get('/centros/export/excel')
+    assert resp.status_code == 200
+    wb = load_workbook(BytesIO(resp.data))
+    filas = list(wb.active.iter_rows(values_only=True))
+    assert filas[0] == ('#', 'Nombre', 'Teléfono', 'Dirección',
+                        'Última entrega', 'Última devolución', 'Estado')
+    fila = next(r for r in filas[1:] if r[1] == centro.name)
+    assert fila[4] == '02/05/2026', 'última entrega en dd/mm/aaaa'
+    assert fila[5] == '15/06/2026', 'última devolución en dd/mm/aaaa'
+
+
+def test_excel_centro_sin_movimientos_muestra_vacio(auth_client, app, centro):
+    resp = auth_client.get('/centros/export/excel')
+    assert resp.status_code == 200
+    wb = load_workbook(BytesIO(resp.data))
+    filas = list(wb.active.iter_rows(values_only=True))
+    fila = next(r for r in filas[1:] if r[1] == centro.name)
+    # openpyxl serializa '' como celda vacía: al leerla vuelve None
+    assert not fila[4] and not fila[5], \
+        'centro sin movimientos: celdas vacías, no None ni crash'
