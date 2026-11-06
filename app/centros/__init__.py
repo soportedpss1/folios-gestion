@@ -20,6 +20,7 @@ from app.utils import plural
 from markupsafe import escape
 from datetime import datetime, date
 from io import BytesIO
+from sqlalchemy import func
 from sqlalchemy.orm import selectinload
 
 
@@ -82,11 +83,27 @@ def _datos_del_centro(centro_id):
     return entregas, pendientes, devueltos
 
 
+def _ultimos_por_centro():
+    """(ultima_entrega, ultima_devolucion): {centroId: date} con el MAX de cada tabla."""
+    entregas = dict(
+        db.session.query(EntregaFolio.centroId,
+                         func.max(EntregaFolio.fechaEntrega))
+        .group_by(EntregaFolio.centroId).all())
+    devoluciones = dict(
+        db.session.query(DevolucionFolio.centroId,
+                         func.max(DevolucionFolio.fechaDevolucion))
+        .group_by(DevolucionFolio.centroId).all())
+    return entregas, devoluciones
+
+
 @centros_bp.route('/')
 @login_required
 def index():
     centros = Centro.query.order_by(Centro.name).all()
-    return render_template('centros/index.html', centros=centros)
+    ultima_entrega, ultima_devolucion = _ultimos_por_centro()
+    return render_template('centros/index.html', centros=centros,
+                           ultima_entrega=ultima_entrega,
+                           ultima_devolucion=ultima_devolucion)
 
 
 @centros_bp.route('/<int:id>/detail')

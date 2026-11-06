@@ -40,6 +40,8 @@
                         <th>Nombre</th>
                         <th>Teléfono</th>
                         <th>Dirección</th>
+                        <th>Última entrega</th>
+                        <th>Última devolución</th>
                         <th>Estado</th>
                         <th class="text-center">Acciones</th>
                     </tr>
@@ -50,6 +52,8 @@
                         <td><a href="{{ url_for('centros.detail', id=c.id) }}" class="text-decoration-none"><strong>{{ c.name }}</strong></a></td>
                         <td>{{ c.telefono or '-' }}</td>
                         <td>{{ c.direccion or '-' }}</td>
+                        <td>{{ ultima_entrega[c.id].strftime('%d/%m/%Y') if ultima_entrega.get(c.id) else '-' }}</td>
+                        <td>{{ ultima_devolucion[c.id].strftime('%d/%m/%Y') if ultima_devolucion.get(c.id) else '-' }}</td>
                         <td>
                             {% if c.activo %}
                                 <span class="badge bg-success">Activo</span>
@@ -74,7 +78,7 @@
                     </tr>
                     {% else %}
                     <tr>
-                        <td class="text-center text-muted py-4" colspan="5">
+                        <td class="text-center text-muted py-4" colspan="7">
                             <i class="fas fa-hospital fa-2x mb-2 d-block"></i>
                             No hay centros registrados
                         </td>
