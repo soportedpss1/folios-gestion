@@ -390,6 +390,7 @@ def export_lista_pdf():
     from weasyprint import HTML
 
     centros = Centro.query.order_by(Centro.name).all()
+    ultima_entrega, ultima_devolucion = _ultimos_por_centro()
 
     encabezado = encabezado_pdf('Gestión de Centros de Salud')
     html_content = f"""
@@ -420,6 +421,8 @@ def export_lista_pdf():
                     <th>Nombre</th>
                     <th>Teléfono</th>
                     <th>Dirección</th>
+                    <th>Última entrega</th>
+                    <th>Última devolución</th>
                     <th>Estado</th>
                 </tr>
             </thead>
@@ -428,12 +431,16 @@ def export_lista_pdf():
 
     filas = []
     for c in centros:
+        e = ultima_entrega.get(c.id)
+        d = ultima_devolucion.get(c.id)
         filas.append(f"""
                 <tr>
                     <td>{c.id}</td>
                     <td>{escape(c.name)}</td>
                     <td>{escape(c.telefono or '-')}</td>
                     <td>{escape(c.direccion or '-')}</td>
+                    <td>{e.strftime('%d/%m/%Y') if e else '-'}</td>
+                    <td>{d.strftime('%d/%m/%Y') if d else '-'}</td>
                     <td>{'Activo' if c.activo else 'Inactivo'}</td>
                 </tr>
         """)

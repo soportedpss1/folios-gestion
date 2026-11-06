@@ -3,6 +3,7 @@
 from datetime import date
 from io import BytesIO
 
+import pytest
 from openpyxl import load_workbook
 
 from app.extensions import db
@@ -68,3 +69,33 @@ def test_excel_centro_sin_movimientos_muestra_vacio(auth_client, app, centro):
     # openpyxl serializa '' como celda vacía: al leerla vuelve None
     assert not fila[4] and not fila[5], \
         'centro sin movimientos: celdas vacías, no None ni crash'
+
+
+def test_pdf_lista_muestra_ultimas_fechas(auth_client, app, tipo, centro,
+                                          operador, monkeypatch):
+    try:
+        import weasyprint
+    except OSError as exc:
+        pytest.skip(f'weasyprint sin libpango (solo Docker): {exc}')
+
+    class _FakeHTML:
+        captured = []
+
+        def __init__(self, string=None, **kwargs):
+            _FakeHTML.captured.append(string)
+
+        def write_pdf(self):
+            return b'%PDF-1.4 fake'
+
+    _seed(centro, tipo, operador)
+    _FakeHTML.captured = []
+    monkeypatch.setattr(weasyprint, 'HTML', _FakeHTML)
+
+    resp = auth_client.get('/centros/export/pdf')
+    assert resp.status_code == 200
+    assert len(_FakeHTML.captured) == 1
+    html = _FakeHTML.captured[0]
+    assert '<th>Última entrega</th>' in html
+    assert '<th>Última devolución</th>' in html
+    assert '02/05/2026' in html, 'última entrega ausente en el PDF'
+    assert '15/06/2026' in html, 'última devolución ausente en el PDF'
