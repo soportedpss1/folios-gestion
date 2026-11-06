@@ -49,7 +49,7 @@ El compose de despliegue usa la imagen publicada:
 ```yaml
 services:
   app:
-    image: soportedpss1/folios-gestion:1.1.0
+    image: soportedpss1/folios-gestion:1.9.0
     ports:
       - "8089:8089"
     env_file: .env
@@ -90,7 +90,7 @@ services:
 
 ## Tags
 
-- `soportedpss1/folios-gestion:1.1.0` — versión fija, recomendada en
+- `soportedpss1/folios-gestion:1.9.0` — versión fija, recomendada en
   producción
 - `soportedpss1/folios-gestion:latest` — última build, para pruebas
 
